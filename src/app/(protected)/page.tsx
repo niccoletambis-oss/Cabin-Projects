@@ -1,3 +1,5 @@
+import { requireUser } from "@/lib/auth";
+import { can } from "@/lib/security";
 import Link from "next/link";
 import {
   Package,
@@ -14,6 +16,39 @@ import { money, dateTime } from "@/lib/format";
 import { InventoryForm } from "@/components/inventory-form";
 export const dynamic = "force-dynamic";
 export default async function Dashboard() {
+  const user = await requireUser();
+  const financial = can(user.role, "finance");
+  const [
+    pendingReports,
+    replacement,
+    pendingPurchases,
+    recentAudits,
+    activity,
+  ] = await Promise.all([
+    db.damageReport.count({
+      where: { status: { in: ["PENDING", "UNDER_REVIEW"] } },
+    }),
+    db.damageReport.findMany({
+      where: { status: "FOR_REPLACEMENT" },
+      select: { itemId: true },
+      distinct: ["itemId"],
+    }),
+    financial
+      ? db.purchase.count({ where: { status: "FOR_APPROVAL" } })
+      : Promise.resolve(0),
+    db.inventoryAudit.findMany({
+      where: user.role === "CARETAKER" ? { userId: user.id } : {},
+      orderBy: { createdAt: "desc" },
+      take: 4,
+    }),
+    financial
+      ? db.activityLog.findMany({
+          include: { user: { select: { name: true } } },
+          orderBy: { createdAt: "desc" },
+          take: 5,
+        })
+      : Promise.resolve([]),
+  ]);
   const [items, categories, locations, transactions] = await Promise.all([
     db.inventoryItem.findMany({
       include: { category: true, location: true },
@@ -58,6 +93,44 @@ export default async function Dashboard() {
       icon: MapPin,
     },
   ];
+  stats.push(
+    {
+      label: "Out of stock",
+      value: items.filter((i) => i.quantity === 0).length,
+      detail: "Items requiring replenishment",
+      icon: Package,
+    },
+    {
+      label: "Pending damage reports",
+      value: pendingReports,
+      detail: "Pending or under review",
+      icon: TriangleAlert,
+    },
+    {
+      label: "Items for replacement",
+      value: new Set([
+        ...replacement.map((r) => r.itemId),
+        ...items
+          .filter((i) => i.condition === "FOR_REPLACEMENT")
+          .map((i) => i.id),
+      ]).size,
+      detail: "Reports awaiting replacement",
+      icon: TriangleAlert,
+    },
+    {
+      label: "Recent inventory audits",
+      value: recentAudits.length,
+      detail: "Your latest inventory checks",
+      icon: Package,
+    },
+  );
+  if (financial)
+    stats.push({
+      label: "Pending purchase requests",
+      value: pendingPurchases,
+      detail: "Awaiting Admin approval",
+      icon: Wallet,
+    });
   return (
     <div className="page">
       <div className="page-heading">
@@ -83,16 +156,18 @@ export default async function Dashboard() {
         </div>
       </section>
       <div className="stats">
-        {stats.map((s) => (
-          <section className="stat-card" key={s.label}>
-            <div className="stat-top">
-              <span>{s.label}</span>
-              <s.icon size={19} />
-            </div>
-            <strong>{s.value}</strong>
-            <small>{s.detail}</small>
-          </section>
-        ))}
+        {stats
+          .filter((s) => financial || s.label !== "Inventory value")
+          .map((s) => (
+            <section className="stat-card" key={s.label}>
+              <div className="stat-top">
+                <span>{s.label}</span>
+                <s.icon size={19} />
+              </div>
+              <strong>{s.value}</strong>
+              <small>{s.detail}</small>
+            </section>
+          ))}
       </div>
       <div className="dashboard-grid">
         <section className="panel">
@@ -144,6 +219,7 @@ export default async function Dashboard() {
             date.
           </p>
           <InventoryForm
+            canEdit={can(user.role, "inventory:edit")}
             compact
             categories={categories}
             locations={locations}
@@ -192,10 +268,53 @@ export default async function Dashboard() {
           </div>
         )}
       </section>
-      <p className="dev-notice">
-        Development foundation · Shared caretaker workspace. Add authentication
-        before using with real operational data.
-      </p>
+      <section className="panel operation-card">
+        <h2>Pending actions</h2>
+        <div className="pending-actions">
+          <Link className="button" href="/damage?type=DAMAGE">
+            Report damage
+          </Link>
+          <Link className="button" href="/damage?type=MISSING">
+            Report missing item
+          </Link>
+          <Link className="button" href="/audits">
+            Inventory check
+          </Link>
+          <Link className="button" href="/low-stock">
+            Restock essentials
+          </Link>
+          {financial && (
+            <Link className="button" href="/purchases">
+              Review purchase requests
+            </Link>
+          )}
+        </div>
+        <h2>Recent inventory audits</h2>
+        {recentAudits.map((a) => (
+          <p key={a.id}>
+            <Link href={`/audits/${a.id}`}>
+              AUD-{a.id.slice(-8).toUpperCase()} ·{" "}
+              {a.status.replaceAll("_", " ")} · {dateTime(a.createdAt)}
+            </Link>
+          </p>
+        ))}
+        {!recentAudits.length && <p>No assigned or recent checks yet.</p>}
+      </section>
+      {financial && (
+        <section className="panel operation-card">
+          <h2>Recent activity</h2>
+          {activity.map((a) => (
+            <p key={a.id}>
+              {dateTime(a.createdAt)} · {a.user?.name ?? "Legacy / system"} ·{" "}
+              {a.action.replaceAll("_", " ")}
+              <small>{a.details}</small>
+            </p>
+          ))}
+          <Link className="button" href="/activity">
+            All activity
+          </Link>
+        </section>
+      )}
     </div>
   );
 }

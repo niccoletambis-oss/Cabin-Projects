@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --webpack --hostname 0.0.0.0",
+    "dev": "next dev --webpack --hostname 127.0.0.1",
     "build": "next build --webpack",
-    "start": "next start --hostname 0.0.0.0",
+    "start": "next start --hostname 127.0.0.1",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "tsx --test tests/*.test.ts",
@@ -16,7 +16,8 @@
     "postinstall": "prisma generate",
     "test:e2e": "playwright test",
     "test:smoke": "node tests/http-smoke.mjs",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "db:seed:dev": "tsx scripts/seed-development.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "7.10.1",

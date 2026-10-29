@@ -1,12 +1,15 @@
 import "dotenv/config";
 import { test, expect } from "@playwright/test";
 import { db } from "../../src/lib/db";
-test("caretaker can add, receive, and withdraw stock on a phone", async ({
+test("authorized owner can add, receive, and withdraw stock on a phone", async ({
   page,
 }) => {
   const sku = `E2E-${Date.now()}`;
   try {
-    await page.goto("/");
+    await page.goto("/login");
+    await page.getByLabel("Email", { exact: true }).fill("owner@cabin.example");
+    await page.getByLabel("Password", { exact: true }).fill("CabinOwner2026!");
+    await page.getByRole("button", { name: "Sign in securely" }).click();
     await expect(
       page.getByRole("heading", { name: "A well-stocked welcome." }),
     ).toBeVisible();
@@ -17,7 +20,7 @@ test("caretaker can add, receive, and withdraw stock on a phone", async ({
     ).toBe(true);
     await page
       .locator(".mobile-nav")
-      .getByRole("link", { name: "Inventory" })
+      .getByRole("link", { name: "Stock" })
       .click();
     await page.getByRole("button", { name: "Add item", exact: true }).click();
     const dialog = page.getByRole("dialog");
@@ -39,9 +42,9 @@ test("caretaker can add, receive, and withdraw stock on a phone", async ({
     );
     await dialog.getByRole("button", { name: "Done / close" }).click();
     await page.getByRole("textbox", { name: "Search inventory" }).fill(sku);
-    await expect(page.getByRole("row").filter({ hasText: sku })).toContainText(
-      "5",
-    );
+    await expect(
+      page.locator(".inventory-card").filter({ hasText: sku }),
+    ).toContainText("5");
     for (const [button, quantity, note] of [
       ["Stock in", "3", "Browser delivery"],
       ["Stock out", "2", "Guest room supplies"],

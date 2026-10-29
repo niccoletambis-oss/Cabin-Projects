@@ -1,6 +1,8 @@
 "use client";
+import Link from "next/link";
 import { useState } from "react";
 import { Search, Package } from "lucide-react";
+import { stockLevel } from "@/lib/inventory-status";
 import { money } from "@/lib/format";
 type Item = {
   id: string;
@@ -9,11 +11,17 @@ type Item = {
   unit: string;
   quantity: number;
   minimumStock: number;
-  unitCost: number;
+  unitCost: number | null;
   category: { name: string };
   location: { name: string };
 };
-export function InventoryList({ items }: { items: Item[] }) {
+export function InventoryList({
+  items,
+  showCosts = false,
+}: {
+  items: Item[];
+  showCosts?: boolean;
+}) {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("");
   const [status, setStatus] = useState("");
@@ -60,7 +68,7 @@ export function InventoryList({ items }: { items: Item[] }) {
           <option value="good">In stock</option>
         </select>
       </div>
-      <div className="table-wrap">
+      <div className="table-wrap inventory-table">
         <table>
           <thead>
             <tr>
@@ -68,7 +76,7 @@ export function InventoryList({ items }: { items: Item[] }) {
               <th>CATEGORY</th>
               <th>LOCATION</th>
               <th>ON HAND</th>
-              <th>UNIT COST</th>
+              {showCosts && <th>UNIT COST</th>}
               <th>STATUS</th>
             </tr>
           </thead>
@@ -81,7 +89,9 @@ export function InventoryList({ items }: { items: Item[] }) {
                       <Package size={19} />
                     </span>
                     <div>
-                      <strong>{i.name}</strong>
+                      <strong>
+                        <Link href={`/inventory/${i.id}`}>{i.name}</Link>
+                      </strong>
                       <small>{i.sku}</small>
                     </div>
                   </div>
@@ -93,22 +103,45 @@ export function InventoryList({ items }: { items: Item[] }) {
                   <span className="muted">{i.unit}</span>
                   <small>Min. {i.minimumStock}</small>
                 </td>
-                <td>{money(i.unitCost)}</td>
+                {showCosts && <td>{money(i.unitCost ?? 0)}</td>}
                 <td>
                   <span
                     className={`badge ${i.quantity === 0 ? "empty" : i.quantity <= i.minimumStock ? "low" : "good"}`}
                   >
-                    {i.quantity === 0
-                      ? "Out of stock"
-                      : i.quantity <= i.minimumStock
-                        ? "Low stock"
-                        : "In stock"}
+                    {stockLevel(i.quantity, i.minimumStock)}
                   </span>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
+      </div>
+      <div className="inventory-cards">
+        {filtered.map((i) => (
+          <article className="inventory-card" key={i.id}>
+            <h3>
+              <Link href={`/inventory/${i.id}`}>{i.name}</Link>
+            </h3>
+            <small>
+              {i.sku} · {i.category.name} · {i.location.name}
+            </small>
+            <p>
+              <strong>
+                {i.quantity} {i.unit}
+              </strong>{" "}
+              · Minimum {i.minimumStock}
+            </p>
+            {showCosts && <p>Unit cost {money(i.unitCost ?? 0)}</p>}
+            <span
+              className={`badge ${i.quantity === 0 ? "empty" : i.quantity <= i.minimumStock ? "low" : "good"}`}
+            >
+              {stockLevel(i.quantity, i.minimumStock)}
+            </span>
+            <p>
+              <Link href={`/inventory/${i.id}`}>View item details →</Link>
+            </p>
+          </article>
+        ))}
       </div>
       {!filtered.length && (
         <div className="empty-state">

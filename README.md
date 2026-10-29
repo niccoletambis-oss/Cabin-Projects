@@ -1,51 +1,110 @@
 # Cabin Bed & Breakfast Inventory
 
-Phase 1: a responsive caretaker dashboard, searchable inventory, item creation, and stock in/out with a PostgreSQL audit trail. Currency is PHP; activity timestamps use Asia/Manila.
+A mobile-first operations workspace built on the existing Phase 1 inventory foundation. Next.js 16, React 19, TypeScript, Tailwind CSS 4, PostgreSQL 17, Prisma 7.10.1 and the PostgreSQL driver adapter. Requires Node.js 22.12+ or 24+ and Docker Compose for the default local database.
 
-## Stack
-
-Next.js 16 App Router, React 19, TypeScript, Tailwind CSS 4, PostgreSQL 17 and Prisma 7 with the PostgreSQL driver adapter. Node.js 22.12+ or 24+ and Docker Compose are required for the default local workflow.
-
-## Run locally
+## Start development
 
 ```sh
-cp .env.example .env       # only if .env does not already exist
+# Only if .env does not already exist:
+cp .env.example .env
 npm ci
-npm run db:generate
 docker compose up -d --wait db
 npm run db:deploy
-npm run db:seed
+npm run db:seed                      # optional sample inventory; preserves existing stock
+ALLOW_DEMO_ACCOUNTS=true npm run db:seed:dev  # explicit development-only accounts
 npm run dev
 ```
 
-Open the development server on port 3000. The seed is repeatable: it creates 12 sample items across five categories and six locations, and never resets existing quantities. Sample data is illustrative. Default database credentials are for local development only. For an external PostgreSQL database, set `DATABASE_URL` securely and omit Docker Compose.
+The server binds to loopback on port 3000. Sign in at `/login`. For a production-mode local check, run `npm run build` then `npm run start`. Use the existing checkout at `/workspace/Cabin-Projects`; cloud tasks are isolated and do not require worktrees. Keep `.env` private. Local database credentials in `.env.example` and Compose are **development-only**. An external PostgreSQL database can be selected with a securely configured `DATABASE_URL`.
 
-## Checks
+## Temporary development accounts
+
+These accounts are created only by the explicitly enabled development seed. The script refuses to run with `NODE_ENV=production`, never overwrites existing accounts/passwords, and does not reset inventory. They are available in the current development database.
+
+| Role          | Email                       | Temporary password  |
+| ------------- | --------------------------- | ------------------- |
+| Owner / Admin | owner@cabin.example         | CabinOwner2026!     |
+| Manager       | manager@cabin.example       | CabinManager2026!   |
+| Caretaker     | caretaker.dev@cabin.example | CabinCaretaker2026! |
+
+**Never use these accounts or passwords in production.** The original Phase 1 sample user `caretaker@cabin.example` is preserved but has no password until an Admin resets it. Create named personal accounts, reset their temporary passwords through Settings, and deactivate demo accounts before a real deployment.
+
+## Permissions and session security
+
+Permissions are checked in request guards, server-rendered pages and mutation services. Hiding navigation is an additional convenience, not the authorization boundary. No role or actor ID is trusted from the browser.
+
+| Capability                                                                            | Admin / Owner | Manager | Caretaker |
+| ------------------------------------------------------------------------------------- | ------------- | ------- | --------- |
+| View inventory; stock in/out; report issues; inventory checks                         | Yes           | Yes     | Yes       |
+| Add/edit inventory; manage suppliers; create/receive purchases; review reports/audits | Yes           | Yes     | No        |
+| View costs, activity history, operational summaries                                   | Yes           | Yes     | No        |
+| Approve purchase requests; manage users                                               | Yes           | No      | No        |
+
+Caretakers can complete their own/assigned audits. Managers can assign checks to active users. Cost fields and purchase/activity routes are omitted or denied server-side for Caretakers, including React Server Component payloads. All mutations record the authenticated actor. Opening seed transactions retain their legacy attribution.
+
+Passwords use salted scrypt (`N=32768, r=8, p=3`, 64-byte keys) and timing-safe comparison. Sessions use cryptographically random 256-bit opaque tokens; only SHA-256 token hashes are stored in PostgreSQL. Sessions expire after eight hours. Cookies are HttpOnly, SameSite=Lax and Secure for HTTPS origins. Login failure messages do not disclose account existence. Five failed attempts lock the account for 15 minutes. User changes and password resets revoke all sessions; self-service password changes require the current password. Admin changes cannot deactivate/demote the acting Admin or remove the last active Admin.
+
+Login and logout accept same-origin POST requests only; Next.js also protects server actions against cross-origin submissions. Logout has no GET mutation. Set `APP_ORIGIN=https://your-real-host` behind an HTTPS reverse proxy; configure that proxy to preserve the intended browser-facing Host. Do not trust arbitrary forwarded host/protocol headers. The application stays on loopback by default. No public deployment was performed.
+
+## Workflows and routes
+
+- `/`: dashboard with stock counts/value (role restricted), low/out-of-stock items, pending damage/purchases, replacement items, assigned/recent audits, activity and stock movements.
+- `/inventory`: existing search/category/stock filtering and Add Item / Stock In / Stock Out. On phones inventory uses cards. `/inventory/[id]`: full item metadata and stock history; Admin/Manager edits never overwrite quantity or transactions.
+- `/low-stock`: normal/low/critical/out-of-stock classification, reorder suggestions, suppliers and role-restricted cost estimates. Selected low-stock items can become a purchase request. Normal items remain in All Items.
+- `/transactions`: paginated, read-only stock transaction history. No transaction deletion endpoint exists.
+- `/suppliers`: contacts, addresses, notes, active/archive status and purchase history. Archiving never deletes suppliers or historical purchases.
+- `/damage`: damaged, broken, missing, lost, stained, repair and replacement reports; attributed reporting, locations and management review/status/remarks. Caretakers cannot submit or read replacement costs. Optional photo evidence is stored in PostgreSQL and served through authenticated `/api/evidence/[id]`, never a public upload directory. JPEG/PNG/WebP only, up to 2 MB; signatures are checked, SVG/HTML uploads rejected. Photos are accessible to active authenticated staff. Report creation/review does not automatically decrement stock.
+- `/audits`, `/audits/[id]`: whole-property or room/location snapshots, assignment, live count differences and complete/shortage/excess/damaged/missing flags. Completing a count leaves stock unchanged. Manager/Admin review can leave it unchanged or explicitly apply adjustments atomically with attributed stock movements. Adjustment is rejected if an item changed after the snapshot; start a new audit rather than overwriting intervening movements. Saved audits show start/completion/review times, performer, results and remarks.
+- `/purchases`, `/purchases/[id]`: multi-item Draft → For Approval → Approved → Purchased → Received requests, with cancellation before receiving. Admin-only approval. Approved requests may be received directly or after marking Purchased. Receiving records user/time and atomically claims the request, creates Stock In movements, increments stock and writes logs. Concurrent/duplicate receiving is rejected; any item failure rolls back the entire receipt.
+- `/users`: Admin-only add/edit/role/activation/password-reset controls, with last-login and creation timestamps.
+- `/activity`: paginated, read-only attributed operations history, including login/logout, account changes, inventory, supplier, report, audit and purchase actions.
+- `/reports`: live operational summaries by category and pending workflow totals.
+- `/settings`: own account/session information and current-password-verified password change.
+- `/login`, `/api/login`, `/api/logout`: authentication. `/denied`: authenticated access-restriction page.
+
+Currency is PHP. Display times use Asia/Manila. Quantities are whole numbers, capped at 1,000,000 per item. Unit costs use database decimals with two decimal places. The API validates all input; database CHECK constraints additionally reject negative stock and invalid transaction/purchase quantities.
+
+## Database changes
+
+`20261028000000_init` remains unchanged. The additive `20261029000000_phase2` migration adds Manager, password/account/session fields, extended item and supplier metadata, report and purchase statuses, approvals/receiving attribution, audit review fields, session storage, protected photo evidence, and activity-role snapshots. `20261029010000_stock_constraints` adds stock/quantity checks and preserves the meaning of existing completed audits/received purchases through status backfills. No reset, table replacement, or historical-record deletion is required.
+
+```sh
+npm run db:deploy                   # apply committed migrations without resetting data
+npm run db:migrate -- --name change # create a future schema migration
+```
+
+Back up a real database before applying any migration. `docker compose stop db` stops the local database; avoid `down -v` unless you explicitly intend to delete its volume.
+
+## Tests and validation
 
 ```sh
 npm run lint
 npm run typecheck
 npm test
 npm run build
+# With the production server running:
+npm run test:smoke
+# Optional real mobile browser regression (requires development accounts):
+npx playwright install chromium
+npm run test:e2e
 ```
 
-With the production server running, `npm run test:smoke` exercises both HTTP pages and the actual add-item/stock server actions. For the mobile browser test, run `npx playwright install chromium`, then `npm run test:e2e` after building. Playwright starts the production server if needed; its workflow creates and cleans up its own inventory record.
+The database suite exercises Phase 1 regression behavior plus login/logout, role permissions, user management and session revocation, metadata/history preservation, damage reporting, assigned audits, review-only and approved adjustments, stale-audit rejection, Admin-only purchase approval, concurrent receiving, multi-line rollback, supplier archiving and activity attribution. Tests use isolated named fixtures and delete only their own records. HTTP smoke uses temporary accounts, checks all 12 protected section routes, same-origin login, role denials, Caretaker cost redaction, item/stock mutations, insufficient-stock feedback, reporting with protected photo evidence, assigned audit submission/review, purchase approval/receiving/duplicate rejection and logout revocation. The browser regression signs in first and checks the mobile inventory workflow.
 
-Tests include database integration checks and require the migrated database. They use uniquely named records and remove their own fixtures. Stock-out uses an atomic conditional update; successful movements and activity logs are saved in the same transaction. Quantities are whole numbers, bounded to 1,000,000 per item. Unit costs use database decimals with two decimal places.
+Validation in the current instance: **21 automated unit/database checks passed**, along with lint, TypeScript, production build, migration/seed repeatability and the HTTP smoke workflow. Browser automation is blocked as described below.
 
-For schema changes, edit `prisma/schema.prisma`, then run `npm run db:migrate -- --name describe_change` and commit the generated migration. `db:deploy` applies committed migrations without resetting data. Run `npm run start` after a production build. `docker compose stop db` stops the local database; do not remove the data volume unless you intend to delete all local data.
+## Cloud network requirements and current limitations
 
-## Phase 1 scope
+The environment currently enforces its package-manager preset with no custom domains applied. Standard Prisma CLI native engine downloads and browser downloads are blocked. The current instance's client and additive migrations were generated/applied using matching official Prisma 7.10.1 JavaScript/WebAssembly tools from integrity-checked npm packages. No checksum, TLS or signature checks were disabled. The normal committed Prisma CLI commands remain the supported project workflow once the host is allowed; temporary onboarding tooling is not an application dependency.
 
-- Dashboard: inventory counts, low stock, stock valuation, locations and recent movements.
-- Inventory: search by item/SKU/room, category and stock filters, add item, stock in/out.
-- Schema: users, categories, rooms/locations, items, transactions, suppliers, purchases/lines, audits/lines, damage/missing reports, linen tracking, expenses, activity logs.
-- Accessible native dialogs, labeled forms, visible keyboard focus, mobile navigation and touch-sized controls. Wide inventory tables scroll within their panel on phones.
+Review/save the already drafted custom allowlist additions in environment settings, retaining the package-manager preset and existing domains:
 
-This is a **development foundation**, not a production deployment. Authentication and authorization are not implemented; mutations run in a shared workspace with no signed-in actor. The sample user is not a login. Do not expose the application publicly or enter real guest/operational data until access controls are added. Supplier, purchase, audit, report, linen and expense workflows are schema foundations only. Reporting a damage record or creating a purchase does not yet change stock; all current stock changes go through the inventory functions. Future work should add authentication, role checks, workflow UI, backups and deployment configuration.
+- `binaries.prisma.sh` — Prisma CLI native schema engine and checksum downloads.
+- `cdn.playwright.dev` — Playwright Chromium download.
+- `storage.googleapis.com` — Chrome for Testing download redirects, when used by Playwright.
 
-## Cloud environment
+Then publish the environment when ready. A saved draft does not apply network changes or publish. Browser automation remains unrun because Chromium download returns HTTP 403 `Domain forbidden`. No alternate browser download routes or unsafe workarounds were used. The app's database and HTTP checks do not depend on browser automation.
 
-Use the existing checkout at `/workspace/Cabin-Projects`; tasks are already isolated and do not need a worktree. Keep `.env` private. Restore dependencies with `npm ci`, start the database, deploy migrations, optionally seed a new development database, then start Next.js. Running processes must restart in new tasks. Package installation needs the npm registry and Prisma tooling needs `binaries.prisma.sh`; browser installation needs `cdn.playwright.dev` and its Google storage redirect. Keep TLS and artifact verification enabled.
+## Phase 3 candidates
 
-Onboarding validation: production build, lint, TypeScript, four unit/database checks, repeatable seeding and production HTTP/server-action smoke checks passed. Native Prisma CLI downloads were blocked by the environment allowlist, so the initial client and migration were generated with the matching official Prisma 7.10.1 JavaScript/WebAssembly tooling, and the migration was applied with that engine. Normal `npm ci`/Prisma CLI reproduction requires the saved network additions to be applied. Mobile browser automation is included but could not run because its browser download was blocked.
+Dedicated linen/laundry tracking and expense-entry workflows (their Phase 1 models are preserved), richer analytics/exports, email invitations and password recovery, MFA, purchase attachments/partial deliveries, multiple photo attachments and object storage, audit scheduling, and deployment/backups/monitoring are future work. These are additions beyond the implemented Phase 2 scope. Before using real operational data, disable demo accounts, use HTTPS with `APP_ORIGIN`, replace development database credentials, arrange backups and perform deployment-specific security review. No public exposure is configured by this repository.

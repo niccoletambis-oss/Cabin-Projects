@@ -8,11 +8,13 @@ export function InventoryForm({
   locations,
   items,
   compact = false,
+  canEdit = false,
 }: {
   categories: Choice[];
   locations: Choice[];
   items: Choice[];
   compact?: boolean;
+  canEdit?: boolean;
 }) {
   const [mode, setMode] = useState<"add" | "IN" | "OUT" | null>(null);
   const [showMessage, setShowMessage] = useState(false);
@@ -37,10 +39,12 @@ export function InventoryForm({
   return (
     <>
       <div className={compact ? "quick-actions" : "action-row"}>
-        <button className="button primary" onClick={() => open("add")}>
-          <Plus size={18} />
-          Add item
-        </button>
+        {canEdit && (
+          <button className="button primary" onClick={() => open("add")}>
+            <Plus size={18} />
+            Add item
+          </button>
+        )}
         <button
           className="button"
           disabled={!items.length}

@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { Shell } from "@/components/shell";
 import "./globals.css";
 export const metadata: Metadata = {
   title: "Cabin | Inventory",
@@ -10,9 +9,7 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body>
-        <Shell>{children}</Shell>
-      </body>
+      <body>{children}</body>
     </html>
   );
 }

@@ -12,6 +12,13 @@ test("PostgreSQL: creation, duplicate SKU, stock changes, and concurrent overdra
   const location = await db.location.create({
     data: { name: `Test ${suffix}` },
   });
+  const actor = await db.user.create({
+    data: {
+      name: `Test actor ${suffix}`,
+      email: `${suffix}@test.invalid`,
+      role: "ADMIN",
+    },
+  });
   let id: string | undefined;
   try {
     const data = {
@@ -24,17 +31,17 @@ test("PostgreSQL: creation, duplicate SKU, stock changes, and concurrent overdra
       categoryId: category.id,
       locationId: location.id,
     };
-    const item = await createItem(data);
+    const item = await createItem(actor, data);
     id = item.id;
     assert.equal(item.quantity, 5);
-    await assert.rejects(createItem(data));
-    await moveStock({
+    await assert.rejects(createItem(actor, data));
+    await moveStock(actor, {
       itemId: id,
       type: "IN",
       quantity: 3,
       note: "Test delivery",
     });
-    await moveStock({
+    await moveStock(actor, {
       itemId: id,
       type: "OUT",
       quantity: 2,
@@ -45,8 +52,18 @@ test("PostgreSQL: creation, duplicate SKU, stock changes, and concurrent overdra
       6,
     );
     const outcomes = await Promise.allSettled([
-      moveStock({ itemId: id, type: "OUT", quantity: 4, note: "First room" }),
-      moveStock({ itemId: id, type: "OUT", quantity: 4, note: "Second room" }),
+      moveStock(actor, {
+        itemId: id,
+        type: "OUT",
+        quantity: 4,
+        note: "First room",
+      }),
+      moveStock(actor, {
+        itemId: id,
+        type: "OUT",
+        quantity: 4,
+        note: "Second room",
+      }),
     ]);
     assert.equal(outcomes.filter((o) => o.status === "fulfilled").length, 1);
     assert.equal(
@@ -56,7 +73,12 @@ test("PostgreSQL: creation, duplicate SKU, stock changes, and concurrent overdra
     assert.equal(await db.stockTransaction.count({ where: { itemId: id } }), 4);
     assert.equal(await db.activityLog.count({ where: { entityId: id } }), 4);
     await assert.rejects(
-      moveStock({ itemId: id, type: "OUT", quantity: 3, note: "Too many" }),
+      moveStock(actor, {
+        itemId: id,
+        type: "OUT",
+        quantity: 3,
+        note: "Too many",
+      }),
     );
     assert.equal(await db.stockTransaction.count({ where: { itemId: id } }), 4);
   } finally {
@@ -67,6 +89,8 @@ test("PostgreSQL: creation, duplicate SKU, stock changes, and concurrent overdra
     }
     await db.category.delete({ where: { id: category.id } });
     await db.location.delete({ where: { id: location.id } });
+    await db.activityLog.deleteMany({ where: { userId: actor.id } });
+    await db.user.delete({ where: { id: actor.id } });
     await db.$disconnect();
   }
 });

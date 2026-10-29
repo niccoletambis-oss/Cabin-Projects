@@ -1,4 +1,5 @@
 "use server";
+import { requireUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { Prisma } from "@prisma/client";
 import { ZodError } from "zod";
@@ -8,12 +9,13 @@ export async function inventoryAction(
   _previous: FormState,
   form: FormData,
 ): Promise<FormState> {
+  const actor = await requireUser();
   try {
     const data = Object.fromEntries(form.entries());
-    if (form.get("intent") === "add") await createItem(data);
-    else await moveStock(data);
-    revalidatePath("/");
-    revalidatePath("/inventory");
+    if (form.get("intent") === "add") await createItem(actor, data);
+    else if (form.get("intent") === "stock") await moveStock(actor, data);
+    else return { success: false, message: "Invalid inventory action." };
+    revalidatePath("/", "layout");
     return {
       success: true,
       message:
@@ -37,7 +39,12 @@ export async function inventoryAction(
             ? "That SKU already exists. Use a unique SKU."
             : "Unable to save. Check your category and room, then try again.",
       };
-    if (error instanceof Error && /stock|Item unavailable/.test(error.message))
+    if (
+      error instanceof Error &&
+      /stock|Item unavailable|Permission denied|Authentication required/.test(
+        error.message,
+      )
+    )
       return { success: false, message: error.message };
     console.error(
       "Inventory operation failed",

@@ -7,6 +7,7 @@ export const money = (value: number) =>
 export const dateTime = (date: Date) =>
   new Intl.DateTimeFormat("en-PH", {
     month: "short",
+    year: "numeric",
     day: "numeric",
     hour: "numeric",
     minute: "2-digit",
