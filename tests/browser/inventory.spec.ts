@@ -27,10 +27,10 @@ test("authorized owner can add, receive, and withdraw stock on a phone", async (
     await dialog.getByLabel("Item name").fill("Browser test towels");
     await dialog.getByLabel("SKU", { exact: true }).fill(sku);
     await dialog
-      .getByLabel("Category", { exact: true })
+      .getByRole("combobox", { name: "Category", exact: true })
       .selectOption({ label: "Linen & Bedding" });
     await dialog
-      .getByLabel("Location / room")
+      .getByRole("combobox", { name: "Location / room", exact: true })
       .selectOption({ label: "Linen Room" });
     await dialog.getByLabel("Opening quantity").fill("5");
     await dialog.getByLabel("Low stock threshold").fill("2");
@@ -51,7 +51,7 @@ test("authorized owner can add, receive, and withdraw stock on a phone", async (
     ]) {
       await page.getByRole("button", { name: button, exact: true }).click();
       await dialog
-        .getByLabel("Inventory item")
+        .getByRole("combobox", { name: "Inventory item", exact: true })
         .selectOption({ label: "Browser test towels" });
       await dialog.getByLabel("Quantity", { exact: true }).fill(quantity);
       await dialog.getByLabel("Reason / note").fill(note);
@@ -65,7 +65,7 @@ test("authorized owner can add, receive, and withdraw stock on a phone", async (
     expect(item.quantity).toBe(6);
     await page.getByRole("button", { name: "Stock out", exact: true }).click();
     await dialog
-      .getByLabel("Inventory item")
+      .getByRole("combobox", { name: "Inventory item", exact: true })
       .selectOption({ label: "Browser test towels" });
     await dialog.getByLabel("Quantity", { exact: true }).fill("7");
     await dialog.getByLabel("Reason / note").fill("Insufficient stock test");

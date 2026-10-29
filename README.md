@@ -91,19 +91,21 @@ npm run test:e2e
 
 The database suite exercises Phase 1 regression behavior plus login/logout, role permissions, user management and session revocation, metadata/history preservation, damage reporting, assigned audits, review-only and approved adjustments, stale-audit rejection, Admin-only purchase approval, concurrent receiving, multi-line rollback, supplier archiving and activity attribution. Tests use isolated named fixtures and delete only their own records. HTTP smoke uses temporary accounts, checks all 12 protected section routes, same-origin login, role denials, Caretaker cost redaction, item/stock mutations, insufficient-stock feedback, reporting with protected photo evidence, assigned audit submission/review, purchase approval/receiving/duplicate rejection and logout revocation. The browser regression signs in first and checks the mobile inventory workflow.
 
-Validation in the current instance: **21 automated unit/database checks passed**, along with lint, TypeScript, production build, migration/seed repeatability and the HTTP smoke workflow. Browser automation is blocked as described below.
+Validation after the published network update: **21 automated unit/database checks passed**, along with lint, TypeScript, production build, standard Prisma CLI generation/schema validation/migration status/deploy/schema-drift verification, the HTTP smoke workflow, and **1 mobile Chromium browser test**. The browser test covers login, responsive layout, item creation, stock in/out and insufficient-stock feedback. Its select locators use combobox roles and accessible names; application behavior is unchanged.
 
-## Cloud network requirements and current limitations
+## Cloud network requirements
 
-The environment currently enforces its package-manager preset with no custom domains applied. Standard Prisma CLI native engine downloads and browser downloads are blocked. The current instance's client and additive migrations were generated/applied using matching official Prisma 7.10.1 JavaScript/WebAssembly tools from integrity-checked npm packages. No checksum, TLS or signature checks were disabled. The normal committed Prisma CLI commands remain the supported project workflow once the host is allowed; temporary onboarding tooling is not an application dependency.
-
-Review/save the already drafted custom allowlist additions in environment settings, retaining the package-manager preset and existing domains:
+The published environment now enforces these custom allowed domains alongside the package-manager preset:
 
 - `binaries.prisma.sh` — Prisma CLI native schema engine and checksum downloads.
-- `cdn.playwright.dev` — Playwright Chromium download.
-- `storage.googleapis.com` — Chrome for Testing download redirects, when used by Playwright.
+- `cdn.playwright.dev` — Playwright Chromium and supporting downloads.
+- `storage.googleapis.com` — Chrome for Testing download redirects.
 
-Then publish the environment when ready. A saved draft does not apply network changes or publish. Browser automation remains unrun because Chromium download returns HTTP 403 `Domain forbidden`. No alternate browser download routes or unsafe workarounds were used. The app's database and HTTP checks do not depend on browser automation.
+Standard Prisma CLI commands now work: generation and validation succeeded, all three migrations are applied, deploy found no pending migrations, and the database-to-schema comparison found no drift. No database reset or new migration was needed. The original Phase 2 JavaScript/WebAssembly bootstrap is no longer required for normal verification.
+
+Playwright Chromium, its headless shell and FFmpeg are installed, and mobile browser automation passed. Two FFmpeg download attempts were denied before Playwright's automatic permitted fallback succeeded; no manual alternate download route or disabled TLS/checksum verification was used. No further network changes were needed, and no environment draft changes or publication were performed during this verification.
+
+Remaining non-blocking tool messages: Next.js labels its configured server-action body-size option as experimental, and the test runner warns that FORCE_COLOR takes precedence over NO_COLOR.
 
 ## Phase 3 candidates
 
