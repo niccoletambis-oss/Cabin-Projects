@@ -1076,3 +1076,82 @@ textarea {
     min-height: 44px;
   }
 }
+fieldset {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  margin: 16px 0;
+}
+legend {
+  font-size: 12px;
+  color: var(--muted);
+  padding: 0 5px;
+}
+.operation-quick-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  margin: 20px 0;
+}
+.report-page .table-wrap {
+  max-height: 70vh;
+}
+.report-page td {
+  white-space: normal;
+  min-width: 110px;
+}
+.report-page th {
+  position: sticky;
+  top: 0;
+}
+.report-controls {
+  margin: 20px 0;
+}
+@media print {
+  .sidebar,
+  .topbar,
+  .mobile-nav,
+  footer,
+  .report-controls {
+    display: none !important;
+  }
+  main {
+    margin: 0 !important;
+  }
+  .page {
+    max-width: none;
+    padding: 0;
+  }
+  .report-page .table-wrap {
+    max-height: none;
+    overflow: visible;
+  }
+  .report-page table {
+    white-space: normal;
+    font-size: 9px;
+  }
+  .report-page th,
+  .report-page td {
+    font-size: 9px;
+    padding: 5px;
+    min-width: 0;
+  }
+  .report-page .panel {
+    border: 0;
+  }
+  body {
+    background: white;
+  }
+}
+@media (max-width: 760px) {
+  .operation-quick-links .button {
+    flex: 1;
+    min-width: 130px;
+  }
+  .report-page .table-wrap {
+    max-height: 60vh;
+  }
+  fieldset .check-label {
+    min-height: 44px;
+  }
+}

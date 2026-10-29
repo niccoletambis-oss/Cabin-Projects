@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { money } from "@/lib/format";
@@ -13,6 +14,9 @@ export default async function Reports() {
   return (
     <div className="page">
       <h1>Operational reports</h1>
+      <Link className="button primary" href="/reports/operations">
+        Detailed reports, filters & exports
+      </Link>
       <p>Live property inventory summaries. Currency: PHP.</p>
       <div className="record-grid">
         <section className="panel operation-card">

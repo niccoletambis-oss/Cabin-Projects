@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import "./globals.css";
 export const metadata: Metadata = {
-  title: "Cabin | Inventory",
-  description: "Thoughtful inventory management for Cabin Bed & Breakfast",
+  title: "Cabin | Operations",
+  description:
+    "Secure inventory and daily operations for Cabin Bed & Breakfast",
 };
 export default function RootLayout({
   children,

@@ -20,6 +20,14 @@ const navigation: {
   {
     group: "Property",
     links: [
+      { href: "/rooms", label: "Room inventory", permission: "rooms:view" },
+      { href: "/linen", label: "Linen & laundry", permission: "linen" },
+      { href: "/bookings", label: "Guest stays", permission: "booking:view" },
+      {
+        href: "/inspections",
+        label: "Arrival / departure checks",
+        permission: "inspection",
+      },
       { href: "/audits", label: "Inventory audits" },
       { href: "/damage", label: "Damage & missing" },
     ],
@@ -27,6 +35,8 @@ const navigation: {
   {
     group: "Purchasing",
     links: [
+      { href: "/charges", label: "Guest charges", permission: "charge:review" },
+      { href: "/expenses", label: "Expenses", permission: "expense:submit" },
       {
         href: "/purchases",
         label: "Purchase requests",
@@ -106,12 +116,12 @@ export function Shell({
             <span className="live-dot" />
             Cabin operations
           </span>
-          <span className="phase-tag">PHASE 02 · {user.role}</span>
+          <span className="phase-tag">PHASE 03 · {user.role}</span>
         </header>
         {children}
         <footer>
           Made for the everyday care of your cabin.
-          <span>Cabin Inventory · PHP</span>
+          <span>Cabin Operations · PHP</span>
         </footer>
       </main>
       <nav className="mobile-nav">

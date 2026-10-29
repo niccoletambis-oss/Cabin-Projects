@@ -22,7 +22,17 @@ export default async function Damage({
     }),
     db.location.findMany(),
     db.damageReport.findMany({
+      where:
+        user.role === "CARETAKER"
+          ? {
+              OR: [
+                { bookingId: null },
+                { location: { assignments: { some: { userId: user.id } } } },
+              ],
+            }
+          : {},
       include: {
+        booking: { select: { reference: true, guestName: true } },
         item: true,
         user: { select: { name: true } },
         location: true,
@@ -93,6 +103,16 @@ export default async function Damage({
           <section key={r.id} className="panel operation-card">
             <span className="badge low">{r.status.replaceAll("_", " ")}</span>
             <h2>{r.item.name}</h2>
+            {r.booking && (
+              <p>
+                Associated with booking{" "}
+                <Link href={`/bookings/${r.bookingId}`}>
+                  {r.booking.reference}
+                </Link>{" "}
+                · {r.booking.guestName}. Responsibility is subject to management
+                review.
+              </p>
+            )}
             <p>
               {r.type} · {r.quantity} {r.item.unit} ·{" "}
               {r.location?.name ?? r.item.locationId}
@@ -122,6 +142,13 @@ export default async function Damage({
                 </Link>
               </p>
             ))}
+            {review && r.bookingId && (
+              <p>
+                <Link className="button" href={`/charges?report=${r.id}`}>
+                  Draft charge after review
+                </Link>
+              </p>
+            )}
             {review && (
               <details>
                 <summary>Review report</summary>

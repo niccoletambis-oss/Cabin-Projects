@@ -8,11 +8,22 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL("/login", requestOrigin(request)));
   const restricted: Record<string, Permission> = {
     users: "users",
+    rooms: "rooms:view",
+    linen: "linen",
+    bookings: "booking:view",
+    inspections: "inspection",
+    charges: "charge:review",
+    expenses: "expense:submit",
     suppliers: "suppliers",
     purchases: "purchase:create",
     activity: "logs",
     reports: "reports",
   };
+  if (
+    request.nextUrl.pathname === "/bookings/new" &&
+    !can(user.role, "booking:manage")
+  )
+    return NextResponse.redirect(new URL("/denied", requestOrigin(request)));
   const permission = restricted[request.nextUrl.pathname.split("/")[1]];
   if (permission && !can(user.role, permission))
     return NextResponse.redirect(new URL("/denied", requestOrigin(request)));
@@ -35,5 +46,11 @@ export const config = {
     "/reports/:path*",
     "/settings/:path*",
     "/denied",
+    "/rooms/:path*",
+    "/linen/:path*",
+    "/bookings/:path*",
+    "/inspections/:path*",
+    "/charges/:path*",
+    "/expenses/:path*",
   ],
 };

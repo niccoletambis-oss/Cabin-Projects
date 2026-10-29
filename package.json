@@ -15,9 +15,10 @@
     "db:seed": "tsx prisma/seed.ts",
     "postinstall": "prisma generate",
     "test:e2e": "playwright test",
-    "test:smoke": "node tests/http-smoke.mjs",
+    "test:smoke": "node tests/http-smoke.mjs && tsx tests/stay-http-smoke.ts",
     "format": "prettier --write .",
-    "db:seed:dev": "tsx scripts/seed-development.ts"
+    "db:seed:dev": "tsx scripts/seed-development.ts",
+    "db:seed:operations": "tsx scripts/seed-operations.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "7.10.1",

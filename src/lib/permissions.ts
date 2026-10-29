@@ -13,12 +13,33 @@ export type Permission =
   | "review"
   | "reports"
   | "logs"
-  | "finance";
+  | "finance"
+  | "rooms:view"
+  | "rooms:manage"
+  | "linen"
+  | "booking:view"
+  | "booking:manage"
+  | "inspection"
+  | "charge:review"
+  | "charge:approve"
+  | "expense:submit"
+  | "expense:manage";
 export function can(role: Role, permission: Permission) {
   if (role === "ADMIN") return true;
   if (role === "MANAGER")
-    return !["users", "purchase:approve"].includes(permission);
-  return ["inventory:view", "stock", "audit"].includes(permission);
+    return !["users", "purchase:approve", "charge:approve"].includes(
+      permission,
+    );
+  return [
+    "inventory:view",
+    "stock",
+    "audit",
+    "rooms:view",
+    "linen",
+    "booking:view",
+    "inspection",
+    "expense:submit",
+  ].includes(permission);
 }
 export function authorize(
   actor: Actor | null | undefined,

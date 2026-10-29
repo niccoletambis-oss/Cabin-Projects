@@ -221,6 +221,8 @@ export async function reviewDamage(actor: Actor, input: unknown) {
       where: { id },
       data: {
         ...data,
+        reviewedAt: new Date(),
+        reviewedById: actor.id,
         resolvedAt: ["REPLACED", "WRITTEN_OFF", "RESOLVED"].includes(
           data.status,
         )

@@ -1,3 +1,4 @@
+import { OperationalOverview } from "@/components/operational-overview";
 import { requireUser } from "@/lib/auth";
 import { can } from "@/lib/security";
 import Link from "next/link";
@@ -26,10 +27,30 @@ export default async function Dashboard() {
     activity,
   ] = await Promise.all([
     db.damageReport.count({
-      where: { status: { in: ["PENDING", "UNDER_REVIEW"] } },
+      where: {
+        status: { in: ["PENDING", "UNDER_REVIEW"] },
+        ...(user.role === "CARETAKER"
+          ? {
+              OR: [
+                { bookingId: null },
+                { location: { assignments: { some: { userId: user.id } } } },
+              ],
+            }
+          : {}),
+      },
     }),
     db.damageReport.findMany({
-      where: { status: "FOR_REPLACEMENT" },
+      where: {
+        status: "FOR_REPLACEMENT",
+        ...(user.role === "CARETAKER"
+          ? {
+              OR: [
+                { bookingId: null },
+                { location: { assignments: { some: { userId: user.id } } } },
+              ],
+            }
+          : {}),
+      },
       select: { itemId: true },
       distinct: ["itemId"],
     }),
@@ -169,6 +190,7 @@ export default async function Dashboard() {
             </section>
           ))}
       </div>
+      <OperationalOverview actor={user} pendingReportCount={pendingReports} />
       <div className="dashboard-grid">
         <section className="panel">
           <div className="panel-heading">

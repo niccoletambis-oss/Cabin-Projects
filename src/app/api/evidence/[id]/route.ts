@@ -4,11 +4,26 @@ export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  if (!(await currentUser()))
-    return new Response("Authentication required", { status: 401 });
+  const actor = await currentUser();
+  if (!actor) return new Response("Authentication required", { status: 401 });
   const photo = await db.photoEvidence.findUnique({
     where: { id: (await params).id },
+    include: { report: { select: { bookingId: true, locationId: true } } },
   });
+  if (
+    photo?.report.bookingId &&
+    actor.role === "CARETAKER" &&
+    (!photo.report.locationId ||
+      !(await db.locationAssignment.findUnique({
+        where: {
+          locationId_userId: {
+            locationId: photo.report.locationId,
+            userId: actor.id,
+          },
+        },
+      })))
+  )
+    return new Response("Forbidden", { status: 403 });
   if (!photo) return new Response("Not found", { status: 404 });
   return new Response(new Uint8Array(photo.data), {
     headers: {
