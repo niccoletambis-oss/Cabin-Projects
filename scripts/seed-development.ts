@@ -1,7 +1,9 @@
+import { assertDevelopmentSeed } from "../src/lib/environment";
 import "dotenv/config";
 import { db } from "../src/lib/db";
 import { hashPassword } from "../src/lib/security";
 async function main() {
+  assertDevelopmentSeed();
   if (
     process.env.NODE_ENV === "production" ||
     process.env.ALLOW_DEMO_ACCOUNTS !== "true"

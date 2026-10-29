@@ -5,3 +5,8 @@ node_modules/
 *.tsbuildinfo
 playwright-report/
 test-results/
+backups/
+*.dump
+*.dump.enc
+*.manifest.enc
+*.key

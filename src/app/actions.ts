@@ -1,4 +1,9 @@
 "use server";
+import { actionContext } from "@/lib/action-context";
+import { mutationContext } from "@/lib/mutation-context";
+import { ApplicationError } from "@/lib/application-error";
+import { RateLimitError } from "@/lib/rate-limit";
+import { captureError } from "@/lib/observability";
 import { requireUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { Prisma } from "@prisma/client";
@@ -11,6 +16,7 @@ export async function inventoryAction(
 ): Promise<FormState> {
   const actor = await requireUser();
   try {
+    await mutationContext(actor.id);
     const data = Object.fromEntries(form.entries());
     if (form.get("intent") === "add") await createItem(actor, data);
     else if (form.get("intent") === "stock") await moveStock(actor, data);
@@ -24,6 +30,9 @@ export async function inventoryAction(
           : "Stock updated successfully.",
     };
   } catch (error) {
+    if (error instanceof ApplicationError || error instanceof RateLimitError)
+      return { success: false, message: error.message };
+    await captureError(actionContext(form.get("intent")), error);
     if (error instanceof ZodError)
       return {
         success: false,
@@ -46,10 +55,7 @@ export async function inventoryAction(
       )
     )
       return { success: false, message: error.message };
-    console.error(
-      "Inventory operation failed",
-      error instanceof Error ? error.name : "Unknown error",
-    );
+
     return {
       success: false,
       message: "Could not save. Check the database connection and try again.",

@@ -1,6 +1,11 @@
 "use server";
-import { db } from "@/lib/db";
-import { hashPassword, verifyPassword } from "@/lib/security";
+import { actionContext } from "@/lib/action-context";
+import { mutationContext } from "@/lib/mutation-context";
+import { ApplicationError } from "@/lib/application-error";
+import { RateLimitError } from "@/lib/rate-limit";
+import { captureError } from "@/lib/observability";
+import { readAttachment } from "@/lib/uploads";
+import { changeOwnPassword } from "@/lib/auth-service";
 import { requireUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import * as ops from "@/lib/operations";
@@ -14,29 +19,10 @@ export async function operationAction(
   const data = Object.fromEntries(form.entries());
   const get = (key: string) => String(form.get(key) ?? "");
   try {
+    await mutationContext(actor.id);
     switch (get("intent")) {
       case "password": {
-        const user = await db.user.findUniqueOrThrow({
-          where: { id: actor.id },
-        });
-        if (!(await verifyPassword(get("currentPassword"), user.passwordHash)))
-          throw new Error("Current password is incorrect");
-        const passwordHash = await hashPassword(get("password"));
-        await db.$transaction(async (tx) => {
-          await tx.user.update({
-            where: { id: actor.id },
-            data: { passwordHash },
-          });
-          await tx.session.deleteMany({ where: { userId: actor.id } });
-          await tx.activityLog.create({
-            data: {
-              userId: actor.id,
-              role: actor.role,
-              action: "PASSWORD_CHANGED",
-              details: "Own password changed; sessions revoked",
-            },
-          });
-        });
+        await changeOwnPassword(actor, get("currentPassword"), get("password"));
         break;
       }
       case "user":
@@ -63,30 +49,10 @@ export async function operationAction(
         break;
       case "damage": {
         const file = form.get("photo");
-        let photo: { data: Buffer; contentType: string } | undefined;
-        if (file instanceof File && file.size) {
-          if (file.size > 2 * 1024 * 1024)
-            throw new Error("Photo must be at most 2 MB");
-          const bytes = Buffer.from(await file.arrayBuffer());
-          const isPng = bytes
-            .subarray(0, 8)
-            .equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]));
-          const isJpeg =
-            bytes[0] === 255 && bytes[1] === 216 && bytes[2] === 255;
-          const isWebp =
-            bytes.subarray(0, 4).toString() === "RIFF" &&
-            bytes.subarray(8, 12).toString() === "WEBP";
-          if (!isPng && !isJpeg && !isWebp)
-            throw new Error("Use a JPEG, PNG or WebP photo");
-          photo = {
-            data: bytes,
-            contentType: isPng
-              ? "image/png"
-              : isJpeg
-                ? "image/jpeg"
-                : "image/webp",
-          };
-        }
+        const photo =
+          file instanceof File && file.size
+            ? await readAttachment(file)
+            : undefined;
         await ops.createDamage(
           actor,
           {
@@ -157,6 +123,9 @@ export async function operationAction(
     revalidatePath("/", "layout");
     return { success: true, message: "Saved successfully." };
   } catch (error) {
+    if (error instanceof ApplicationError || error instanceof RateLimitError)
+      return { success: false, message: error.message };
+    await captureError(actionContext(form.get("intent")), error);
     if (error instanceof ZodError)
       return {
         success: false,

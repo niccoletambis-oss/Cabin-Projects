@@ -1,6 +1,6 @@
 # Cabin Bed & Breakfast Operations
 
-A mobile-first Bed & Breakfast operations workspace built on the preserved Phase 1 inventory and Phase 2 security foundation. Next.js 16, React 19, TypeScript, Tailwind CSS 4, PostgreSQL 17, Prisma 7.10.1 and the PostgreSQL driver adapter. Requires Node.js 22.12+ or 24+ and Docker Compose for the default local database.
+A mobile-first Bed & Breakfast operations workspace built on the preserved Phase 1 inventory and Phase 2 security foundation. Next.js 16, React 19, TypeScript, Tailwind CSS 4, PostgreSQL 17, Prisma 7.10.1 and the PostgreSQL driver adapter. Requires Node.js 22.19+ or 24+ (24 LTS recommended) and Docker Compose for the default local database.
 
 ## Start development
 
@@ -181,3 +181,13 @@ Remaining non-blocking tool messages: Next.js labels its configured server-actio
 Phase 3 is an operational workflow foundation, not a public production deployment. Intentionally deferred: a full booking engine, payment gateways (explicitly outside scope), native XLSX, email invitations/password recovery/MFA, notification automation, object storage/large attachments, expense credit/reversal accounting, production hosting, monitoring, retention policies and backup/restore operations. CSV/Excel-friendly CSV and printable reports are implemented.
 
 Before real deployment, disable development accounts, replace local database credentials, use HTTPS and the real `APP_ORIGIN`, configure the trusted reverse proxy, test backups/restoration and perform deployment-specific security review. No new external service credentials or network hosts are required for Phase 3. Existing npm/Prisma/Playwright allowlist settings suffice. The app remains on loopback; no environment configuration was published or public deployment performed.
+
+## Production readiness (Phase 4)
+
+Phase 4 adds validated production configuration, private S3-compatible attachments with PostgreSQL development storage, secure password recovery, shared PostgreSQL rate limits, stronger headers/session protection, privacy archive/legal holds, health/monitoring, encrypted backup/restore helpers and admin bootstrap/recovery. Phases 1–3 remain in place. No database reset or public deployment is part of this phase.
+
+Read the [production operations guide](docs/production-readiness.md) before deploying. It covers every required/optional variable in [.env.example](.env.example), verified PostgreSQL TLS/pooling/migrations, private bucket and SMTP setup, MFA status, retention, backups/restores, initial Admin, HTTPS ingress, Docker/Node hosting and remaining deployment gates. [Phase 4 verification](docs/phase4-verification.md) records the actual checks.
+
+New operational commands: `production:check`, `admin:bootstrap`, `admin:recover`, `db:seed:production`, `files:migrate`, `maintenance`, `db:backup`, `db:restore`. All are private CLI tools; no public administrative setup/restore route exists. Production seed creates no demo records. Development sample commands refuse production mode.
+
+New routes: `/forgot-password`, `/reset-password`, `/settings/storage`, `/api/password/forgot`, `/api/password/reset`, `/api/files/:id`, `/api/health`, `/api/health/live`, `/api/health/ready`. Existing attachment URLs remain compatible. MFA activation is deferred and fails closed; it is not presented as enabled.

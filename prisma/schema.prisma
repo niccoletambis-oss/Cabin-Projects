@@ -45,6 +45,8 @@ enum LinenStatus {
 }
 
 model User {
+  resetTokens        PasswordResetToken[]
+  storedFiles        StoredFile[]
   roomAssignments    LocationAssignment[]
   bookingsCreated    Booking[]
   inspections        StayInspection[]
@@ -83,21 +85,22 @@ model Category {
 }
 
 model Location {
-  type          LocationType         @default(AREA)
-  active        Boolean              @default(true)
-  assignments   LocationAssignment[]
-  roomInventory RoomInventory[]
-  bookingRooms  BookingRoom[]
-  inspections   StayInspection[]
-  linenBalances LinenBalance[]
-  linenFrom     LinenMovement[]      @relation("LinenFrom")
-  linenTo       LinenMovement[]      @relation("LinenTo")
-  id            String               @id @default(cuid())
-  name          String               @unique
-  description   String?
-  audits        InventoryAudit[]
-  reports       DamageReport[]
-  items         InventoryItem[]
+  privateAttachments PrivateAttachment[]
+  type               LocationType         @default(AREA)
+  active             Boolean              @default(true)
+  assignments        LocationAssignment[]
+  roomInventory      RoomInventory[]
+  bookingRooms       BookingRoom[]
+  inspections        StayInspection[]
+  linenBalances      LinenBalance[]
+  linenFrom          LinenMovement[]      @relation("LinenFrom")
+  linenTo            LinenMovement[]      @relation("LinenTo")
+  id                 String               @id @default(cuid())
+  name               String               @unique
+  description        String?
+  audits             InventoryAudit[]
+  reports            DamageReport[]
+  items              InventoryItem[]
 }
 
 model InventoryItem {
@@ -135,6 +138,7 @@ model InventoryItem {
   linenEntries    LinenTracking[]
 
   @@index([categoryId, locationId])
+  @@index([name])
 }
 
 model StockTransaction {
@@ -166,23 +170,24 @@ model Supplier {
 }
 
 model Purchase {
-  id            String         @id @default(cuid())
-  reference     String         @unique
-  status        PurchaseStatus @default(DRAFT)
-  notes         String?
-  requestedById String?
-  requestedBy   User?          @relation("Requester", fields: [requestedById], references: [id])
-  approvedById  String?
-  approvedBy    User?          @relation("Approver", fields: [approvedById], references: [id])
-  approvedAt    DateTime?
-  receivedById  String?
-  receivedBy    User?          @relation("Receiver", fields: [receivedById], references: [id])
-  supplierId    String
-  supplier      Supplier       @relation(fields: [supplierId], references: [id])
-  purchasedAt   DateTime       @default(now())
-  receivedAt    DateTime?
-  lines         PurchaseLine[]
-  expenses      Expense[]
+  privateAttachments PrivateAttachment[]
+  id                 String              @id @default(cuid())
+  reference          String              @unique
+  status             PurchaseStatus      @default(DRAFT)
+  notes              String?
+  requestedById      String?
+  requestedBy        User?               @relation("Requester", fields: [requestedById], references: [id])
+  approvedById       String?
+  approvedBy         User?               @relation("Approver", fields: [approvedById], references: [id])
+  approvedAt         DateTime?
+  receivedById       String?
+  receivedBy         User?               @relation("Receiver", fields: [receivedById], references: [id])
+  supplierId         String
+  supplier           Supplier            @relation(fields: [supplierId], references: [id])
+  purchasedAt        DateTime            @default(now())
+  receivedAt         DateTime?
+  lines              PurchaseLine[]
+  expenses           Expense[]
 }
 
 model PurchaseLine {
@@ -252,6 +257,9 @@ model DamageReport {
   description       String
   resolvedAt        DateTime?
   createdAt         DateTime            @default(now())
+
+  @@index([status, createdAt])
+  @@index([bookingId])
 }
 
 model LinenTracking {
@@ -291,9 +299,13 @@ model Expense {
   purchaseId     String?
   purchase       Purchase?             @relation(fields: [purchaseId], references: [id])
   incurredAt     DateTime              @default(now())
+
+  @@index([incurredAt])
+  @@index([recordedById, incurredAt])
 }
 
 model ActivityLog {
+  requestId String?
   id        String   @id @default(cuid())
   userId    String?
   user      User?    @relation(fields: [userId], references: [id])
@@ -304,6 +316,7 @@ model ActivityLog {
   createdAt DateTime @default(now())
 
   @@index([createdAt])
+  @@index([userId, createdAt])
 }
 
 enum ItemCondition {
@@ -361,12 +374,14 @@ model Session {
 }
 
 model PhotoEvidence {
-  id          String       @id @default(cuid())
-  reportId    String
-  report      DamageReport @relation(fields: [reportId], references: [id])
-  contentType String
-  data        Bytes
-  createdAt   DateTime     @default(now())
+  storedFileId String?
+  storedFile   StoredFile?  @relation(fields: [storedFileId], references: [id])
+  id           String       @id @default(cuid())
+  reportId     String
+  report       DamageReport @relation(fields: [reportId], references: [id])
+  contentType  String
+  data         Bytes
+  createdAt    DateTime     @default(now())
 }
 
 enum LocationType {
@@ -520,30 +535,34 @@ model LinenMovement {
 }
 
 model Booking {
-  id            String           @id @default(cuid())
-  reference     String           @unique
-  guestName     String
-  mobile        String?
-  email         String?
-  guestCount    Int
-  checkInDate   DateTime         @db.Date
-  checkOutDate  DateTime         @db.Date
-  source        BookingSource
-  notes         String?
-  status        BookingStatus    @default(UPCOMING)
-  createdById   String
-  createdBy     User             @relation(fields: [createdById], references: [id])
-  createdAt     DateTime         @default(now())
-  updatedAt     DateTime         @updatedAt
-  checkedInAt   DateTime?
-  checkedOutAt  DateTime?
-  rooms         BookingRoom[]
-  inspections   StayInspection[]
-  damageReports DamageReport[]
-  charges       GuestCharge[]
-  expenses      Expense[]
+  privacyArchivedAt  DateTime?
+  legalHold          Boolean             @default(false)
+  privateAttachments PrivateAttachment[]
+  id                 String              @id @default(cuid())
+  reference          String              @unique
+  guestName          String
+  mobile             String?
+  email              String?
+  guestCount         Int
+  checkInDate        DateTime            @db.Date
+  checkOutDate       DateTime            @db.Date
+  source             BookingSource
+  notes              String?
+  status             BookingStatus       @default(UPCOMING)
+  createdById        String
+  createdBy          User                @relation(fields: [createdById], references: [id])
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  checkedInAt        DateTime?
+  checkedOutAt       DateTime?
+  rooms              BookingRoom[]
+  inspections        StayInspection[]
+  damageReports      DamageReport[]
+  charges            GuestCharge[]
+  expenses           Expense[]
 
   @@index([checkInDate, checkOutDate, status])
+  @@index([status, checkInDate])
 }
 
 model BookingRoom {
@@ -618,9 +637,13 @@ model GuestCharge {
   paidAt          DateTime?
   createdAt       DateTime            @default(now())
   updatedAt       DateTime            @updatedAt
+
+  @@index([status, createdAt])
 }
 
 model OperationAttachment {
+  storedFileId     String?
+  storedFile       StoredFile?         @relation(fields: [storedFileId], references: [id])
   id               String              @id @default(cuid())
   inspectionLineId String?
   inspectionLine   StayInspectionLine? @relation(fields: [inspectionLineId], references: [id])
@@ -629,4 +652,76 @@ model OperationAttachment {
   contentType      String
   data             Bytes
   createdAt        DateTime            @default(now())
+}
+
+enum StoredFileProvider {
+  DATABASE
+  S3
+}
+
+enum StoredFileState {
+  STAGED
+  READY
+  FAILED
+  ARCHIVED
+}
+
+model StoredFile {
+  id                 String                @id @default(uuid())
+  objectKey          String                @unique
+  provider           StoredFileProvider
+  state              StoredFileState       @default(STAGED)
+  originalName       String
+  contentType        String
+  size               Int
+  originalSize       Int
+  sha256             String
+  storageVersion     String?
+  data               Bytes?
+  createdById        String?
+  createdBy          User?                 @relation(fields: [createdById], references: [id])
+  createdAt          DateTime              @default(now())
+  archivedAt         DateTime?
+  cleanupPending     Boolean               @default(false)
+  photos             PhotoEvidence[]
+  operations         OperationAttachment[]
+  privateAttachments PrivateAttachment[]
+
+  @@index([state, createdAt])
+  @@index([createdById])
+}
+
+model PrivateAttachment {
+  id           String     @id @default(cuid())
+  storedFileId String
+  storedFile   StoredFile @relation(fields: [storedFileId], references: [id])
+  purchaseId   String?
+  purchase     Purchase?  @relation(fields: [purchaseId], references: [id])
+  bookingId    String?
+  booking      Booking?   @relation(fields: [bookingId], references: [id])
+  locationId   String?
+  location     Location?  @relation(fields: [locationId], references: [id])
+  notes        String
+  createdAt    DateTime   @default(now())
+}
+
+model PasswordResetToken {
+  credentialHash String
+  id             String    @id @default(uuid())
+  tokenHash      String    @unique
+  userId         String
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt      DateTime
+  usedAt         DateTime?
+  createdAt      DateTime  @default(now())
+
+  @@index([userId, expiresAt])
+}
+
+model RateLimitBucket {
+  keyHash   String   @id
+  count     Int      @default(1)
+  expiresAt DateTime
+
+  @@index([expiresAt])
 }

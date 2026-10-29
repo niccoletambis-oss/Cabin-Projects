@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev --webpack --hostname 127.0.0.1",
     "build": "next build --webpack",
-    "start": "next start --hostname 127.0.0.1",
+    "start": "node scripts/start.mjs",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "tsx --test tests/*.test.ts",
@@ -15,24 +15,42 @@
     "db:seed": "tsx prisma/seed.ts",
     "postinstall": "prisma generate",
     "test:e2e": "playwright test",
-    "test:smoke": "node tests/http-smoke.mjs && tsx tests/stay-http-smoke.ts",
+    "test:smoke": "node tests/http-smoke.mjs && tsx tests/stay-http-smoke.ts && tsx tests/production-http-smoke.ts",
     "format": "prettier --write .",
     "db:seed:dev": "tsx scripts/seed-development.ts",
-    "db:seed:operations": "tsx scripts/seed-operations.ts"
+    "db:seed:operations": "tsx scripts/seed-operations.ts",
+    "admin:bootstrap": "tsx scripts/admin.ts bootstrap",
+    "admin:recover": "tsx scripts/admin.ts recover",
+    "production:check": "tsx scripts/production-check.ts",
+    "db:backup": "tsx scripts/backup.ts",
+    "db:restore": "tsx scripts/restore.ts",
+    "db:seed:production": "tsx scripts/seed-production.ts",
+    "files:migrate": "tsx scripts/migrate-files.ts",
+    "maintenance": "tsx scripts/maintenance.ts",
+    "postbuild": "node scripts/prepare-standalone.mjs"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1159.0",
     "@prisma/adapter-pg": "7.10.1",
     "@prisma/client": "7.10.1",
+    "@smithy/node-http-handler": "^4.13.0",
+    "https-proxy-agent": "^9.1.0",
     "lucide-react": "^0.468.0",
     "next": "16.4.3",
+    "nodemailer": "^10.3.0",
+    "pg": "^8.23.1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
+    "sharp": "^0.35.5",
+    "undici": "^8.12.3",
     "zod": "^4.3.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.64.1",
     "@tailwindcss/postcss": "^4.1.0",
     "@types/node": "^24.0.0",
+    "@types/nodemailer": "^8.0.2",
+    "@types/pg": "^8.23.1",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "dotenv": "^17.0.0",
@@ -45,6 +63,6 @@
     "typescript": "^5.9.0"
   },
   "engines": {
-    "node": "^22.12.0 || >=24.0.0"
+    "node": "^22.19.0 || >=24.0.0"
   }
 }

@@ -1,3 +1,5 @@
+import { stageFile, readyFile, discardFile } from "./storage/service";
+import type { UploadInput } from "./storage/validation";
 import { db } from "./db";
 import { authorize, hashPassword, type Actor } from "./security";
 import { z } from "zod";
@@ -78,7 +80,37 @@ export async function saveUser(actor: Actor, input: unknown) {
     const user = old
       ? await tx.user.update({ where: { id: old.id }, data: fields })
       : await tx.user.create({ data: fields });
-    if (old) await tx.session.deleteMany({ where: { userId: old.id } });
+    if (old) {
+      await tx.session.deleteMany({ where: { userId: old.id } });
+      await tx.passwordResetToken.updateMany({
+        where: { userId: old.id, usedAt: null },
+        data: { usedAt: new Date() },
+      });
+    }
+    if (old && old.role !== user.role)
+      await log(
+        tx,
+        actor,
+        "ROLE_CHANGED",
+        user.id,
+        `Role changed from ${old.role} to ${user.role}; sessions revoked`,
+      );
+    if (old?.active && !user.active)
+      await log(
+        tx,
+        actor,
+        "ACCOUNT_DEACTIVATED",
+        user.id,
+        "Account deactivated; sessions revoked",
+      );
+    if (old && passwordHash)
+      await log(
+        tx,
+        actor,
+        "PASSWORD_ADMIN_RESET",
+        user.id,
+        "Admin changed password; sessions and reset links revoked",
+      );
     await log(
       tx,
       actor,
@@ -160,7 +192,7 @@ export async function editItem(actor: Actor, input: unknown) {
 export async function createDamage(
   actor: Actor,
   input: unknown,
-  photo?: { data: Buffer; contentType: string },
+  photo?: UploadInput,
 ) {
   authorize(actor, "stock");
   const data = z
@@ -175,36 +207,38 @@ export async function createDamage(
     .parse(input);
   if (actor.role === "CARETAKER" && data.estimatedCost !== undefined)
     throw new Error("Permission denied");
-  if (
-    photo &&
-    (photo.data.length > 2 * 1024 * 1024 ||
-      !["image/jpeg", "image/png", "image/webp"].includes(photo.contentType))
-  )
-    throw new Error("Photo must be JPEG, PNG or WebP, up to 2 MB");
-  return db.$transaction(async (tx) => {
-    const report = await tx.damageReport.create({
-      data: {
-        ...data,
-        userId: actor.id,
-        photos: photo
-          ? {
-              create: {
-                contentType: photo.contentType,
-                data: new Uint8Array(photo.data),
-              },
-            }
-          : undefined,
-      },
+  const file = photo ? await stageFile(actor, photo) : undefined;
+  try {
+    return await db.$transaction(async (tx) => {
+      const report = await tx.damageReport.create({
+        data: {
+          ...data,
+          userId: actor.id,
+          photos: file
+            ? {
+                create: {
+                  contentType: file!.contentType,
+                  data: new Uint8Array(),
+                  storedFileId: file!.id,
+                },
+              }
+            : undefined,
+        },
+      });
+      if (file) await readyFile(tx, file, actor);
+      await log(
+        tx,
+        actor,
+        "DAMAGE_REPORTED",
+        report.id,
+        `${data.type}: ${data.description}`,
+      );
+      return report;
     });
-    await log(
-      tx,
-      actor,
-      "DAMAGE_REPORTED",
-      report.id,
-      `${data.type}: ${data.description}`,
-    );
-    return report;
-  });
+  } catch (error) {
+    if (file) await discardFile(file);
+    throw error;
+  }
 }
 export async function reviewDamage(actor: Actor, input: unknown) {
   authorize(actor, "review");

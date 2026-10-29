@@ -1,3 +1,4 @@
+import { stageFile, readyFile, discardFile } from "./storage/service";
 import { db } from "./db";
 import { authorize, type Actor } from "./permissions";
 import { z } from "zod";
@@ -385,7 +386,12 @@ export async function saveBooking(actor: Actor, input: unknown) {
       actor,
       before ? "BOOKING_UPDATED" : "BOOKING_CREATED",
       booking.id,
-      JSON.stringify({ before, after: { ...fields, rooms: roomIds } }),
+      JSON.stringify({
+        reference: booking.reference,
+        changedFields: Object.keys(fields),
+        roomCount: roomIds.length,
+        personalDataExcluded: true,
+      }),
     );
     return booking;
   });
@@ -703,6 +709,7 @@ export async function reportInspectionIssue(actor: Actor, input: unknown) {
           create: line.attachments.map((a) => ({
             contentType: a.contentType,
             data: a.data,
+            storedFileId: a.storedFileId,
           })),
         },
       },
@@ -955,6 +962,7 @@ export async function reviewExpense(
 export type AttachmentInput = {
   data: Uint8Array<ArrayBuffer>;
   contentType: string;
+  originalName?: string;
 };
 export async function attachEvidence(
   actor: Actor,
@@ -963,44 +971,72 @@ export async function attachEvidence(
 ) {
   if (Boolean(input.inspectionLineId) === Boolean(input.expenseId))
     fail("Choose exactly one attachment parent.");
-  return db.$transaction(async (tx) => {
-    if (input.inspectionLineId) {
-      authorize(actor, "inspection");
-      const line = await tx.stayInspectionLine.findUniqueOrThrow({
-        where: { id: input.inspectionLineId },
-        include: { inspection: true },
-      });
-      await assertRoom(actor, line.inspection.locationId, tx);
-      await tx.$queryRaw`SELECT id FROM "StayInspection" WHERE id=${line.inspectionId} FOR UPDATE`;
-      const inspection = await tx.stayInspection.findUniqueOrThrow({
-        where: { id: line.inspectionId },
-      });
-      if (inspection.status !== "DRAFT")
-        fail("Completed inspection evidence is immutable.");
-      if (photo.contentType === "application/pdf")
-        fail("Inspection evidence must be an image.");
-    }
-    if (input.expenseId) {
-      authorize(actor, "expense:submit");
-      await tx.$queryRaw`SELECT id FROM "Expense" WHERE id=${input.expenseId} FOR UPDATE`;
-      const expense = await tx.expense.findUniqueOrThrow({
-        where: { id: input.expenseId },
-      });
-      if (actor.role === "CARETAKER" && expense.recordedById !== actor.id)
-        fail("This expense is not yours.");
-      if (expense.status !== "SUBMITTED")
-        fail("Reviewed receipts are immutable.");
-    }
-    const attachment = await tx.operationAttachment.create({
-      data: { ...input, ...photo },
+  // Authorize before sending bytes to storage, and recheck under transaction locks.
+  if (input.inspectionLineId) {
+    const line = await db.stayInspectionLine.findUniqueOrThrow({
+      where: { id: input.inspectionLineId },
+      include: { inspection: true },
     });
-    await stayLog(
-      tx,
-      actor,
-      "EVIDENCE_ATTACHED",
-      attachment.id,
-      "Protected evidence attached",
-    );
-    return attachment;
-  });
+    await assertRoom(actor, line.inspection.locationId);
+  }
+  if (input.expenseId) {
+    authorize(actor, "expense:submit");
+    const expense = await db.expense.findUniqueOrThrow({
+      where: { id: input.expenseId },
+    });
+    if (actor.role === "CARETAKER" && expense.recordedById !== actor.id)
+      fail("This expense is not yours.");
+  }
+  const file = await stageFile(actor, photo, !!input.expenseId);
+  try {
+    return await db.$transaction(async (tx) => {
+      if (input.inspectionLineId) {
+        authorize(actor, "inspection");
+        const line = await tx.stayInspectionLine.findUniqueOrThrow({
+          where: { id: input.inspectionLineId },
+          include: { inspection: true },
+        });
+        await assertRoom(actor, line.inspection.locationId, tx);
+        await tx.$queryRaw`SELECT id FROM "StayInspection" WHERE id=${line.inspectionId} FOR UPDATE`;
+        const inspection = await tx.stayInspection.findUniqueOrThrow({
+          where: { id: line.inspectionId },
+        });
+        if (inspection.status !== "DRAFT")
+          fail("Completed inspection evidence is immutable.");
+        if (photo.contentType === "application/pdf")
+          fail("Inspection evidence must be an image.");
+      }
+      if (input.expenseId) {
+        authorize(actor, "expense:submit");
+        await tx.$queryRaw`SELECT id FROM "Expense" WHERE id=${input.expenseId} FOR UPDATE`;
+        const expense = await tx.expense.findUniqueOrThrow({
+          where: { id: input.expenseId },
+        });
+        if (actor.role === "CARETAKER" && expense.recordedById !== actor.id)
+          fail("This expense is not yours.");
+        if (expense.status !== "SUBMITTED")
+          fail("Reviewed receipts are immutable.");
+      }
+      const attachment = await tx.operationAttachment.create({
+        data: {
+          ...input,
+          data: new Uint8Array(),
+          contentType: file.contentType,
+          storedFileId: file.id,
+        },
+      });
+      await readyFile(tx, file, actor);
+      await stayLog(
+        tx,
+        actor,
+        "EVIDENCE_ATTACHED",
+        attachment.id,
+        "Protected evidence attached",
+      );
+      return attachment;
+    });
+  } catch (error) {
+    await discardFile(file);
+    throw error;
+  }
 }

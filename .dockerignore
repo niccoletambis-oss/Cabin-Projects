@@ -1,0 +1,15 @@
+.git
+.next
+node_modules
+.env*
+!.env.example
+playwright-report
+test-results
+*.tsbuildinfo
+backups
+attachments
+tests
+*.key
+*.pem
+*.dump*
+*.manifest.enc

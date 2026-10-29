@@ -1,4 +1,9 @@
 "use server";
+import { actionContext } from "@/lib/action-context";
+import { mutationContext } from "@/lib/mutation-context";
+import { ApplicationError } from "@/lib/application-error";
+import { RateLimitError } from "@/lib/rate-limit";
+import { captureError } from "@/lib/observability";
 import { requireUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { ZodError } from "zod";
@@ -14,6 +19,7 @@ export async function stayAction(
   const data = Object.fromEntries(form.entries());
   let href: string | undefined;
   try {
+    await mutationContext(actor.id);
     switch (get("intent")) {
       case "room": {
         const room = await ops.saveRoom(actor, {
@@ -119,6 +125,9 @@ export async function stayAction(
     revalidatePath("/", "layout");
     return { success: true, message: "Saved successfully.", href };
   } catch (error) {
+    if (error instanceof ApplicationError || error instanceof RateLimitError)
+      return { success: false, message: error.message };
+    await captureError(actionContext(form.get("intent")), error);
     if (error instanceof ZodError)
       return {
         success: false,

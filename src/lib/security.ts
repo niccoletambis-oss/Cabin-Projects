@@ -17,8 +17,15 @@ const scrypt = (password: string, salt: string) =>
 export { can, authorize } from "./permissions";
 export type { Actor, Permission } from "./permissions";
 export async function hashPassword(password: string) {
-  if (password.length < 12 || password.length > 128)
-    throw new Error("Password must contain 12–128 characters");
+  if (password.length < 15 || password.length > 128)
+    throw new Error("Password must contain 15–128 characters");
+  if (
+    /^(.)\1+$/.test(password) ||
+    ["123456789012345", "passwordpassword", "qwertyqwertyqwerty"].includes(
+      password.toLowerCase(),
+    )
+  )
+    throw new Error("Password must be unique and difficult to guess");
   const salt = randomBytes(16).toString("hex");
   const key = await scrypt(password, salt);
   return `scrypt-v1:${salt}:${key.toString("hex")}`;

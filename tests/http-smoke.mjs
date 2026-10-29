@@ -272,7 +272,7 @@ try {
       photo: new File(
         [
           Buffer.from(
-            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jG0cAAAAASUVORK5CYII=",
+            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAADElEQVQImWP4//8/AAX+Av5Y8msOAAAAAElFTkSuQmCC",
             "base64",
           ),
         ],
@@ -294,7 +294,7 @@ try {
   assert.equal((await get(`/api/evidence/${photo.id}`)).status, 401);
   const evidence = await get(`/api/evidence/${photo.id}`, cookies.CARETAKER);
   assert.equal(evidence.status, 200);
-  assert.equal(evidence.headers.get("content-type"), "image/png");
+  assert.equal(evidence.headers.get("content-type"), "image/webp");
   assert.ok((await evidence.arrayBuffer()).byteLength > 8);
   await submit(
     "operationAction",
@@ -480,6 +480,9 @@ try {
   }
   await db.activityLog.deleteMany({
     where: { userId: { in: users.map((u) => u.id) } },
+  });
+  await db.storedFile.deleteMany({
+    where: { createdById: { in: users.map((u) => u.id) } },
   });
   await db.user.deleteMany({ where: { id: { in: users.map((u) => u.id) } } });
   await db.supplier.deleteMany({ where: { id: { in: supplierIds } } });

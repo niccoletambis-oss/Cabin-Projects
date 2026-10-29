@@ -1,3 +1,4 @@
+import { EvidencePanel } from "@/components/evidence-panel";
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { can } from "@/lib/permissions";
@@ -148,6 +149,7 @@ export default async function Room({
           </StayForm>
         </section>
       )}
+      <EvidencePanel parent={{ locationId: id }} />
     </div>
   );
 }

@@ -1,8 +1,9 @@
+import { withApiHeaders } from "@/lib/api-response";
 import { sameOrigin, requestOrigin } from "@/lib/request-origin";
 import { NextRequest, NextResponse } from "next/server";
 import { destroySession } from "@/lib/auth-service";
 import { SESSION_COOKIE } from "@/lib/auth";
-export async function POST(request: NextRequest) {
+async function handlePOST(request: NextRequest) {
   if (!sameOrigin(request))
     return new NextResponse("Invalid origin", { status: 403 });
   await destroySession(request.cookies.get(SESSION_COOKIE)?.value);
@@ -13,3 +14,5 @@ export async function POST(request: NextRequest) {
   response.cookies.delete(SESSION_COOKIE);
   return response;
 }
+
+export const POST = withApiHeaders(handlePOST);

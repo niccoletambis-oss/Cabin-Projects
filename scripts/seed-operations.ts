@@ -1,9 +1,11 @@
+import { assertDevelopmentSeed } from "../src/lib/environment";
 import "dotenv/config";
 import { db } from "../src/lib/db";
 import { createItem } from "../src/lib/inventory";
 import * as ops from "../src/lib/stay-operations";
 import { manilaDay } from "../src/lib/stay-status";
 async function main() {
+  assertDevelopmentSeed();
   if (
     process.env.NODE_ENV === "production" ||
     process.env.ALLOW_DEMO_DATA !== "true"

@@ -165,5 +165,6 @@ export async function cleanupStay(f: Awaited<ReturnType<typeof stayFixture>>) {
   await db.location.deleteMany({ where: { id: { in: locationIds } } });
   await db.category.delete({ where: { id: f.category.id } });
   await db.activityLog.deleteMany({ where: { userId: { in: userIds } } });
+  await db.storedFile.deleteMany({ where: { createdById: { in: userIds } } });
   await db.user.deleteMany({ where: { id: { in: userIds } } });
 }

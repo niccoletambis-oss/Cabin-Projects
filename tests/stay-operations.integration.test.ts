@@ -15,7 +15,7 @@ import { inspectionFlags } from "../src/lib/stay-status";
 const png = {
   data: new Uint8Array(
     Buffer.from(
-      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jG0cAAAAASUVORK5CYII=",
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAADElEQVQImWP4//8/AAX+Av5Y8msOAAAAAElFTkSuQmCC",
       "base64",
     ),
   ),
@@ -454,9 +454,38 @@ test("Phase 3 operational stay lifecycle, permissions and history", async (t) =>
           ops.saveExpense(f.manager, { ...input, id: expense.id, amount: 500 }),
           /locked/,
         );
+        const readyBefore = await db.storedFile.count({
+          where: { createdById: f.caretaker.id, state: "READY" },
+        });
+        const failedBefore = await db.storedFile.count({
+          where: { createdById: f.caretaker.id, state: "FAILED" },
+        });
+        const attachmentsBefore = await db.operationAttachment.count({
+          where: { expenseId },
+        });
         await assert.rejects(
           ops.attachEvidence(f.caretaker, { expenseId }, png),
           /immutable/,
+        );
+        assert.equal(
+          await db.storedFile.count({
+            where: { createdById: f.caretaker.id, state: "READY" },
+          }),
+          readyBefore,
+        );
+        assert.equal(
+          await db.storedFile.count({
+            where: {
+              createdById: f.caretaker.id,
+              state: "FAILED",
+              cleanupPending: false,
+            },
+          }),
+          failedBefore + 1,
+        );
+        assert.equal(
+          await db.operationAttachment.count({ where: { expenseId } }),
+          attachmentsBefore,
         );
       },
     );

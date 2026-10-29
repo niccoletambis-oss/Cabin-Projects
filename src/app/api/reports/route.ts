@@ -1,7 +1,8 @@
+import { withApiHeaders } from "@/lib/api-response";
 import { currentUser } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { operationalReport, reportCsv } from "@/lib/operational-reports";
-export async function GET(request: Request) {
+async function handleGET(request: Request) {
   const actor = await currentUser();
   if (!actor) return new Response("Authentication required", { status: 401 });
   if (!can(actor.role, "reports"))
@@ -33,3 +34,5 @@ export async function GET(request: Request) {
     );
   }
 }
+
+export const GET = withApiHeaders(handleGET);

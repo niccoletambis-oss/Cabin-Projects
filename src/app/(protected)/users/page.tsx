@@ -38,7 +38,7 @@ export default async function Users() {
           />
           <Hidden name="active" value="true" />
           <Field
-            label="Temporary password (12–128 characters)"
+            label="Temporary password (15–128 characters)"
             name="password"
             type="password"
             required

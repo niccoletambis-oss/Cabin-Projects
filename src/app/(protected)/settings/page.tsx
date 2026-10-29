@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import { ActionForm } from "@/components/action-form";
 import { Field } from "@/components/fields";
@@ -6,6 +7,11 @@ export default async function Settings() {
   return (
     <div className="page">
       <h1>Account settings</h1>
+      {user.role === "ADMIN" && (
+        <p>
+          <Link href="/settings/storage">Private file retention</Link>
+        </p>
+      )}
       <section className="panel operation-card">
         <h2>{user.name}</h2>
         <p>
@@ -22,7 +28,7 @@ export default async function Settings() {
             required
           />
           <Field
-            label="New password (12–128 characters)"
+            label="New password (15–128 characters)"
             name="password"
             type="password"
             required

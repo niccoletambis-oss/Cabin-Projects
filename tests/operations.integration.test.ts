@@ -209,7 +209,10 @@ test("Phase 2 PostgreSQL workflows and security", async (t) => {
             description: "Missing during room check",
           },
           {
-            data: Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
+            data: Buffer.from(
+              "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAADElEQVQImWP4//8/AAX+Av5Y8msOAAAAAElFTkSuQmCC",
+              "base64",
+            ),
             contentType: "image/png",
           },
         );
@@ -519,6 +522,7 @@ test("Phase 2 PostgreSQL workflows and security", async (t) => {
     await db.inventoryItem.deleteMany({ where: { id: { in: items } } });
     await db.supplier.deleteMany({ where: { id: { in: suppliers } } });
     await db.activityLog.deleteMany({ where: { userId: { in: users } } });
+    await db.storedFile.deleteMany({ where: { createdById: { in: users } } });
     await db.user.deleteMany({ where: { id: { in: users } } });
     await db.category.delete({ where: { id: category.id } });
     await db.location.delete({ where: { id: location.id } });

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { currentUser } from "@/lib/auth";
 import { redirect } from "next/navigation";
 export default async function Login({
@@ -53,6 +54,9 @@ export default async function Login({
           )}
           <button className="button primary">Sign in securely</button>
         </form>
+        <p>
+          <Link href="/forgot-password">Forgot your password?</Link>
+        </p>
         <small>Access is limited to authorized Cabin team members.</small>
       </section>
     </div>

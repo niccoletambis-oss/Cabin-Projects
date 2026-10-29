@@ -1,3 +1,4 @@
+import { EvidencePanel } from "@/components/evidence-panel";
 import { requireUser } from "@/lib/auth";
 import { can } from "@/lib/security";
 import { db } from "@/lib/db";
@@ -82,6 +83,7 @@ export default async function Purchase({
         ))}
       </div>
       <p>Receiving is atomic and may happen only once.</p>
+      <EvidencePanel parent={{ purchaseId: id }} />
     </div>
   );
 }

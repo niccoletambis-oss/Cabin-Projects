@@ -1,15 +1,21 @@
 "use client";
-export default function ErrorPage({ reset }: { reset: () => void }) {
+export default function ErrorPage({
+  error,
+  reset,
+}: {
+  error: Error & { digest?: string };
+  reset: () => void;
+}) {
   return (
-    <div className="page empty-state">
+    <section className="panel operation-card">
       <h1>We couldn’t load this page.</h1>
       <p>
-        Check that PostgreSQL is running and database migrations have been
-        applied.
+        Please try again. If this continues, contact an Owner.
+        {error.digest ? ` Reference ${error.digest}` : ""}
       </p>
       <button className="button primary" onClick={reset}>
         Try again
       </button>
-    </div>
+    </section>
   );
 }

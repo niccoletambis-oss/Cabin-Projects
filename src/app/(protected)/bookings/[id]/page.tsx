@@ -1,3 +1,6 @@
+import { ActionForm } from "@/components/action-form";
+import { securityAction } from "@/app/security-actions";
+import { EvidencePanel } from "@/components/evidence-panel";
 import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -57,7 +60,7 @@ export default async function Booking({
         Arrival {b.checkInDate.toISOString().slice(0, 10)} · Departure{" "}
         {b.checkOutDate.toISOString().slice(0, 10)}
       </p>
-      {manage && (
+      {manage && (!b.privacyArchivedAt || user.role === "ADMIN") && (
         <p>
           Source {b.source} · {b.mobile || "No mobile"} ·{" "}
           {b.email || "No email"}
@@ -148,6 +151,43 @@ export default async function Booking({
           </StayForm>
         </>
       )}
+      {b.privacyArchivedAt && (
+        <p>Contact details archived. Historical records retained.</p>
+      )}
+      {user.role === "ADMIN" &&
+        ["CHECKED_OUT", "CANCELLED"].includes(b.status) && (
+          <section className="panel operation-card">
+            <h2>Guest privacy</h2>
+            <p>
+              {b.legalHold ? "Legal hold active." : "No legal hold."} Archiving
+              restricts contact visibility; it retains original records.
+            </p>
+            {[
+              b.privacyArchivedAt ? "restore" : "archive",
+              b.legalHold ? "release" : "hold",
+            ].map((action) => (
+              <ActionForm
+                key={action}
+                intent="booking-privacy"
+                handler={securityAction}
+                label={action + " privacy status"}
+              >
+                <Hidden name="id" value={id} />
+                <Hidden name="privacyAction" value={action} />
+                <label>
+                  Confirm your password
+                  <input
+                    type="password"
+                    name="password"
+                    required
+                    autoComplete="current-password"
+                  />
+                </label>
+              </ActionForm>
+            ))}
+          </section>
+        )}
+      <EvidencePanel parent={{ bookingId: id }} />
     </div>
   );
 }
