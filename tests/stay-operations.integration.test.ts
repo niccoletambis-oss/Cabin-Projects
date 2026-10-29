@@ -616,3 +616,33 @@ test("inspection comparison preserves pre-existing damage and flags stains witho
     inspectionFlags(4, 0, "MISSING", 4, "GOOD").includes("Missing Item"),
   );
 });
+
+test("expense edit forms retain the Manila calendar date across UTC midnight", async () => {
+  const { createElement } = await import("react");
+  const { renderToStaticMarkup } = await import("react-dom/server");
+  const { ExpenseFields } = await import("../src/components/expense-fields");
+  const markup = renderToStaticMarkup(
+    createElement(ExpenseFields, {
+      financial: false,
+      bookings: [],
+      suppliers: [],
+      purchases: [],
+      issues: [],
+      expense: {
+        incurredAt: new Date("2026-10-29T20:30:00Z"),
+        category: "LAUNDRY",
+        description: "Timezone fixture",
+        payee: null,
+        supplierId: null,
+        amount: 100,
+        paymentMethod: "CASH",
+        receiptNumber: null,
+        purchaseId: null,
+        damageReportId: null,
+        bookingId: null,
+        notes: null,
+      },
+    }),
+  );
+  assert.match(markup, /name="incurredAt"[^>]*value="2026-10-30"/);
+});

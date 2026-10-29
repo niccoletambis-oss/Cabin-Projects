@@ -37,7 +37,7 @@ export function ExpenseFields({
           label="Expense date"
           name="incurredAt"
           type="date"
-          value={expense?.incurredAt.toISOString().slice(0, 10) ?? manilaDay()}
+          value={expense ? manilaDay(expense.incurredAt) : manilaDay()}
           required
         />
         <Field
