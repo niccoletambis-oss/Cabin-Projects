@@ -55,10 +55,18 @@ try {
         form.append(key, entry instanceof Blob ? entry : String(entry));
     }
     const body = await encodeReply([{ success: false, message: "" }, form]);
-    const response = await fetch(base + "/inventory", {
+    // Use a real action-owning page. Otherwise Next may forward to an
+    // arbitrary worker whose page permission legitimately rejects this actor.
+    const path = name === "operationAction" ? "/damage" : "/inventory";
+    const id = actionId(name);
+    assert.ok(
+      manifest.node[id].workers[`app/(protected)${path}/page`],
+      `${name} must be registered on ${path}`,
+    );
+    const response = await fetch(base + path, {
       method: "POST",
       headers: {
-        "Next-Action": actionId(name),
+        "Next-Action": id,
         Origin: base,
         Accept: "text/x-component",
         ...(cookie ? { Cookie: cookie } : {}),

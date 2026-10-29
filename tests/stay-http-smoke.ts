@@ -52,20 +52,23 @@ async function main() {
       for (const [key, value] of Object.entries(fields))
         for (const v of Array.isArray(value) ? value : [value])
           form.append(key, v instanceof Blob ? v : String(v));
-      const response = await fetch(
-        base + (name === "stayAction" ? "/rooms" : "/inventory"),
-        {
-          method: "POST",
-          headers: {
-            Origin: base,
-            Cookie: cookie,
-            "Next-Action": actionId(name),
-            Accept: "text/x-component",
-          },
-          body: await encodeReply([{ success: false, message: "" }, form]),
-          redirect: "manual",
-        },
+      const path = name === "stayAction" ? "/rooms" : "/damage";
+      const id = actionId(name);
+      assert.ok(
+        manifest.node[id].workers[`app/(protected)${path}/page`],
+        `${name} must be registered on ${path}`,
       );
+      const response = await fetch(base + path, {
+        method: "POST",
+        headers: {
+          Origin: base,
+          Cookie: cookie,
+          "Next-Action": id,
+          Accept: "text/x-component",
+        },
+        body: await encodeReply([{ success: false, message: "" }, form]),
+        redirect: "manual",
+      });
       assert.equal(response.status, 200);
       const body = await response.text();
       assert.ok(
