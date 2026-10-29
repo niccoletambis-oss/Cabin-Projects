@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import { spawn } from "node:child_process";
 if (existsSync(".env")) process.loadEnvFile(".env");
-const child = spawn(process.execPath, [".next/standalone/server.js"], {
+const child = spawn(process.execPath, [".next/standalone/runtime-entry.mjs"], {
   stdio: "inherit",
   env: {
     ...process.env,

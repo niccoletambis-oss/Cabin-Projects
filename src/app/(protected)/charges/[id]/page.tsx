@@ -1,3 +1,4 @@
+export const metadata = { title: "Guest charges details | Cabin" };
 import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";

@@ -1,3 +1,4 @@
+export const metadata = { title: "Overview | Cabin" };
 import { OperationalOverview } from "@/components/operational-overview";
 import { requireUser } from "@/lib/auth";
 import { can } from "@/lib/security";

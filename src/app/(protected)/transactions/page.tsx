@@ -1,4 +1,6 @@
-import Link from "next/link";
+export const metadata = { title: "Stock transactions | Cabin" };
+import { Pagination } from "@/components/pagination";
+import { pageNumber, pageQuery, PAGE_SIZE } from "@/lib/pagination";
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { dateTime } from "@/lib/format";
@@ -9,15 +11,14 @@ export default async function Transactions({
 }) {
   await requireUser();
   const query = await searchParams;
-  const page = Math.max(1, Math.min(10000, Number(query.page) || 1));
+  const page = pageNumber(query.page);
   const movements = await db.stockTransaction.findMany({
     include: {
       item: { select: { name: true, unit: true } },
       user: { select: { name: true } },
     },
-    orderBy: { createdAt: "desc" },
-    skip: (page - 1) * 50,
-    take: 50,
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    ...pageQuery(page),
   });
   return (
     <div className="page">
@@ -26,7 +27,7 @@ export default async function Transactions({
         Immutable stock history. Corrections require a new, attributed movement.
       </p>
       <div className="record-grid">
-        {movements.map((t) => (
+        {movements.slice(0, PAGE_SIZE).map((t) => (
           <section className="panel operation-card" key={t.id}>
             <span className="badge good">
               {t.type} · {t.quantity} {t.item.unit}
@@ -40,18 +41,10 @@ export default async function Transactions({
           </section>
         ))}
       </div>
-      <div className="action-row">
-        {page > 1 && (
-          <Link className="button" href={`?page=${page - 1}`}>
-            Previous
-          </Link>
-        )}
-        {movements.length === 50 && (
-          <Link className="button" href={`?page=${page + 1}`}>
-            Next
-          </Link>
-        )}
-      </div>
+      {!movements.length && (
+        <p className="empty-state">No history on this page.</p>
+      )}
+      <Pagination page={page} hasNext={movements.length > PAGE_SIZE} />
     </div>
   );
 }

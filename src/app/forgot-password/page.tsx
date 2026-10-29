@@ -1,3 +1,4 @@
+export const metadata = { title: "Forgot password | Cabin" };
 import Link from "next/link";
 export default async function Forgot({
   searchParams,

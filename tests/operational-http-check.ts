@@ -66,12 +66,21 @@ async function main() {
   invalid.stderr.on("data", (x) => {
     invalidOutput += x;
   });
-  const timer = setTimeout(() => invalid.kill("SIGTERM"), 15000);
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    invalid.kill("SIGTERM");
+  }, 15000);
   const code = await new Promise<number | null>((resolve) =>
     invalid.once("exit", resolve),
   );
   clearTimeout(timer);
-  assert.notEqual(code, 0);
+  assert.equal(
+    timedOut,
+    false,
+    "Invalid production config must exit by itself",
+  );
+  assert.ok(typeof code === "number" && code > 0);
   assert.match(invalidOutput, /Invalid server configuration/);
   assert.ok(!invalidOutput.includes(secret));
   console.info(

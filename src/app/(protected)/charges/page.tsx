@@ -1,3 +1,6 @@
+export const metadata = { title: "Guest charges | Cabin" };
+import { Pagination } from "@/components/pagination";
+import { pageNumber, pageQuery, PAGE_SIZE } from "@/lib/pagination";
 import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -7,17 +10,20 @@ import { money, dateTime } from "@/lib/format";
 export default async function Charges({
   searchParams,
 }: {
-  searchParams: Promise<{ report?: string }>;
+  searchParams: Promise<{ report?: string; page?: string }>;
 }) {
   await requireUser("charge:review");
-  const { report } = await searchParams;
+  const query = await searchParams;
+  const { report } = query;
+  const page = pageNumber(query.page);
   const [charges, issues] = await Promise.all([
     db.guestCharge.findMany({
       include: {
         booking: { select: { reference: true, guestName: true } },
         damageReport: { include: { item: { select: { name: true } } } },
       },
-      orderBy: { createdAt: "desc" },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      ...pageQuery(page),
     }),
     db.damageReport.findMany({
       where: {
@@ -92,7 +98,7 @@ export default async function Charges({
         </StayForm>
       </details>
       <div className="record-grid">
-        {charges.map((c) => (
+        {charges.slice(0, PAGE_SIZE).map((c) => (
           <Link
             key={c.id}
             className="panel operation-card"
@@ -114,6 +120,14 @@ export default async function Charges({
           </Link>
         ))}
       </div>
+      {!charges.length && (
+        <p className="empty-state">No records on this page.</p>
+      )}
+      <Pagination
+        page={page}
+        hasNext={charges.length > PAGE_SIZE}
+        query={{ report: report ?? "" }}
+      />
     </div>
   );
 }

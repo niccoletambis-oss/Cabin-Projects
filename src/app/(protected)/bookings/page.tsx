@@ -1,9 +1,18 @@
+export const metadata = { title: "Guest stays | Cabin" };
+import { StatusBadge } from "@/components/status-badge";
+import { Pagination } from "@/components/pagination";
+import { pageNumber, pageQuery, PAGE_SIZE } from "@/lib/pagination";
 import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { can } from "@/lib/permissions";
 import { roomScope } from "@/lib/stay-operations";
-export default async function Bookings() {
+export default async function Bookings({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
+  const page = pageNumber((await searchParams).page);
   const user = await requireUser("booking:view");
   const bookings = await db.booking.findMany({
     where:
@@ -16,7 +25,8 @@ export default async function Bookings() {
         include: { location: true },
       },
     },
-    orderBy: { checkInDate: "desc" },
+    orderBy: [{ checkInDate: "desc" }, { id: "desc" }],
+    ...pageQuery(page),
   });
   return (
     <div className="page">
@@ -35,13 +45,13 @@ export default async function Bookings() {
         )}
       </div>
       <div className="record-grid">
-        {bookings.map((b) => (
+        {bookings.slice(0, PAGE_SIZE).map((b) => (
           <Link
             key={b.id}
             className="panel operation-card"
             href={`/bookings/${b.id}`}
           >
-            <span className="badge good">{b.status.replaceAll("_", " ")}</span>
+            <StatusBadge status={b.status} />
             <h2>{b.reference}</h2>
             <p>
               {b.guestName} · {b.guestCount} guests
@@ -54,7 +64,12 @@ export default async function Bookings() {
           </Link>
         ))}
       </div>
-      {!bookings.length && <p>No accessible bookings yet.</p>}
+      {!bookings.length && (
+        <p className="empty-state">
+          No records on this page. New records will appear here.
+        </p>
+      )}
+      <Pagination page={page} hasNext={bookings.length > PAGE_SIZE} />
     </div>
   );
 }

@@ -1,3 +1,4 @@
+export const metadata = { title: "Operational reports | Cabin" };
 import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -10,7 +11,12 @@ export default async function OperationalReports({
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
   const user = await requireUser("reports");
-  const query = await searchParams;
+  const raw = await searchParams;
+  const query = Object.fromEntries(
+    Object.entries(raw).filter(
+      (pair): pair is [string, string] => typeof pair[1] === "string",
+    ),
+  );
   let report;
   let error = "";
   try {
@@ -24,10 +30,32 @@ export default async function OperationalReports({
       db.location.findMany({ select: { id: true, name: true } }),
       db.category.findMany({ select: { id: true, name: true } }),
       db.inventoryItem.findMany({ select: { id: true, name: true } }),
-      db.booking.findMany({ select: { id: true, reference: true } }),
+      db.booking.findMany({
+        where: query.bookingSearch
+          ? {
+              reference: {
+                contains: query.bookingSearch.slice(0, 100),
+                mode: "insensitive",
+              },
+            }
+          : {},
+        select: { id: true, reference: true },
+        orderBy: { checkInDate: "desc" },
+        take: 100,
+      }),
       db.supplier.findMany({ select: { id: true, name: true } }),
       db.user.findMany({ select: { id: true, name: true } }),
     ]);
+  const selectedBooking = query.bookingId
+    ? await db.booking.findUnique({
+        where: { id: query.bookingId.slice(0, 100) },
+        select: { id: true, reference: true },
+      })
+    : null;
+  const bookingChoices =
+    selectedBooking && !bookings.some((b) => b.id === selectedBooking.id)
+      ? [selectedBooking, ...bookings]
+      : bookings;
   const params = new URLSearchParams(
     Object.entries(query).filter(
       (pair): pair is [string, string] => typeof pair[1] === "string",
@@ -41,6 +69,10 @@ export default async function OperationalReports({
         reports are current state; dates apply to movement, inspection, issue,
         purchase, audit and expense records. Times in exports use ISO UTC;
         monthly groups use Asia/Manila.
+      </p>
+      <p>
+        To find an older booking, enter its reference and apply filters, then
+        select the matching booking.
       </p>
       <form method="get" className="panel operation-card report-controls">
         <div className="form-grid">
@@ -86,12 +118,17 @@ export default async function OperationalReports({
             options={[{ id: "", name: "All" }, ...items]}
           />
           <Field
+            label="Find booking reference (latest 100 matches)"
+            name="bookingSearch"
+            value={query.bookingSearch ?? ""}
+          />
+          <Field
             label="Booking"
             name="bookingId"
             value={query.bookingId ?? ""}
             options={[
               { id: "", name: "All" },
-              ...bookings.map((b) => ({ id: b.id, name: b.reference })),
+              ...bookingChoices.map((b) => ({ id: b.id, name: b.reference })),
             ]}
           />
           <Field
@@ -140,12 +177,18 @@ export default async function OperationalReports({
           <p>
             {report.rows.length} rows · {report.query.type.replaceAll("-", " ")}
           </p>
-          <section className="panel table-wrap">
-            <table>
+          <section
+            className="panel table-wrap"
+            tabIndex={0}
+            aria-label="Scrollable report results"
+          >
+            <table aria-label="Operational report results">
               <thead>
                 <tr>
                   {report.columns.map((c) => (
-                    <th key={c}>{c}</th>
+                    <th scope="col" key={c}>
+                      {c}
+                    </th>
                   ))}
                 </tr>
               </thead>

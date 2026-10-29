@@ -1,5 +1,6 @@
 "use client";
-import { useActionState, useEffect, useRef, useState } from "react";
+import { staffMessage } from "@/lib/staff-message";
+import { useActionState, useEffect, useRef, useState, useId } from "react";
 import { Plus, ArrowDownLeft, ArrowUpRight, X } from "lucide-react";
 import { inventoryAction } from "@/app/actions";
 type Choice = { id: string; name: string };
@@ -16,6 +17,7 @@ export function InventoryForm({
   compact?: boolean;
   canEdit?: boolean;
 }) {
+  const messageId = useId();
   const [mode, setMode] = useState<"add" | "IN" | "OUT" | null>(null);
   const [showMessage, setShowMessage] = useState(false);
   const [state, action, pending] = useActionState(
@@ -91,7 +93,15 @@ export function InventoryForm({
           </button>
         </div>
         {mode && (
-          <form ref={form} action={action} key={mode}>
+          <form
+            ref={form}
+            action={action}
+            key={mode}
+            aria-busy={pending}
+            aria-describedby={
+              showMessage && state.message ? messageId : undefined
+            }
+          >
             <input
               type="hidden"
               name="intent"
@@ -231,12 +241,15 @@ export function InventoryForm({
             )}
             {showMessage && state.message && (
               <p
+                id={messageId}
                 role="status"
+                aria-live="polite"
+                aria-atomic="true"
                 className={
                   state.success ? "form-message success" : "form-message"
                 }
               >
-                {state.message}
+                {staffMessage(state.message)}
               </p>
             )}
             <div className="dialog-footer">

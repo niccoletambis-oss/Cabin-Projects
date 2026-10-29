@@ -1,3 +1,4 @@
+export const metadata = { title: "Sign in | Cabin" };
 import Link from "next/link";
 import { currentUser } from "@/lib/auth";
 import { redirect } from "next/navigation";

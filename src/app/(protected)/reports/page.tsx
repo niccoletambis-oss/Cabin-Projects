@@ -1,3 +1,4 @@
+export const metadata = { title: "Reports | Cabin" };
 import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -12,7 +13,7 @@ export default async function Reports() {
   ]);
   const categories = [...new Set(items.map((i) => i.category.name))];
   return (
-    <div className="page">
+    <div className="page report-page">
       <h1>Operational reports</h1>
       <Link className="button primary" href="/reports/operations">
         Detailed reports, filters & exports

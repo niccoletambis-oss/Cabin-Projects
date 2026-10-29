@@ -1,10 +1,18 @@
+export const metadata = { title: "Inventory audits | Cabin" };
+import { Pagination } from "@/components/pagination";
+import { pageNumber, pageQuery, PAGE_SIZE } from "@/lib/pagination";
 import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { ActionForm } from "@/components/action-form";
 import { Field } from "@/components/fields";
 import { dateTime } from "@/lib/format";
-export default async function Audits() {
+export default async function Audits({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
+  const page = pageNumber((await searchParams).page);
   const user = await requireUser("audit");
   const assignees =
     user.role === "CARETAKER"
@@ -22,7 +30,8 @@ export default async function Audits() {
         location: true,
         _count: { select: { lines: true } },
       },
-      orderBy: { createdAt: "desc" },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      ...pageQuery(page),
     }),
   ]);
   return (
@@ -53,7 +62,7 @@ export default async function Audits() {
       </section>
       <h2>Audit history</h2>
       <div className="record-grid">
-        {audits.map((a) => (
+        {audits.slice(0, PAGE_SIZE).map((a) => (
           <Link
             key={a.id}
             href={`/audits/${a.id}`}
@@ -72,6 +81,12 @@ export default async function Audits() {
           </Link>
         ))}
       </div>
+      {!audits.length && (
+        <p className="empty-state">
+          No records on this page. New records will appear here.
+        </p>
+      )}
+      <Pagination page={page} hasNext={audits.length > PAGE_SIZE} />
     </div>
   );
 }

@@ -191,3 +191,11 @@ Read the [production operations guide](docs/production-readiness.md) before depl
 New operational commands: `production:check`, `admin:bootstrap`, `admin:recover`, `db:seed:production`, `files:migrate`, `maintenance`, `db:backup`, `db:restore`. All are private CLI tools; no public administrative setup/restore route exists. Production seed creates no demo records. Development sample commands refuse production mode.
 
 New routes: `/forgot-password`, `/reset-password`, `/settings/storage`, `/api/password/forgot`, `/api/password/reset`, `/api/files/:id`, `/api/health`, `/api/health/live`, `/api/health/ready`. Existing attachment URLs remain compatible. MFA activation is deferred and fails closed; it is not presented as enabled.
+
+## Final acceptance (Phase 5)
+
+Phase 5 polishes mobile controls, keyboard navigation, contrast, form feedback, status labels and page titles; paginates historical lists; and adds staging-provider and Docker acceptance tools. Business authorization, immutable history and existing migrations remain in place. Development preview and public production deployment are separate capabilities: localhost in the cloud is not reachable from a user's device without a supported preview/port-forwarding service.
+
+Read the [staging checklist](docs/staging-checklist.md), [deployment GO/NO-GO checklist](docs/deployment-checklist.md), [operations runbook](docs/operations-runbook.md), [disaster recovery steps](docs/disaster-recovery.md) and [Phase 5 verification](docs/phase5-verification.md). Actual infrastructure gates remain **NO-GO until evidenced**, even when all local tests pass. No scheduler or public deployment is installed.
+
+Private tooling commands: `staging:preflight` performs HTTPS/header/readiness probes; `staging:storage` creates/verifies/deletes only a unique staging canary; `test:docker` checks the local production artifact; `test:operations` checks local dependency outages/startup refusal; `test:recovery` requires explicit isolated local drill confirmation. Real staging commands require production-mode validation, separate staging resources and exact origin confirmation. Never use these tests with production credentials/data.

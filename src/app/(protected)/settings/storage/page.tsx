@@ -1,3 +1,4 @@
+export const metadata = { title: "Private file retention | Cabin" };
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { ActionForm } from "@/components/action-form";

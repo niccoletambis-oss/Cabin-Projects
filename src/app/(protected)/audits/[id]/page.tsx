@@ -1,3 +1,4 @@
+export const metadata = { title: "Inventory audits details | Cabin" };
 import { AuditCount } from "@/components/audit-count";
 import { auditFlag } from "@/lib/inventory-status";
 import { requireUser } from "@/lib/auth";

@@ -1,3 +1,4 @@
+import { expenseSummary } from "@/lib/expense-summary";
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { can, type Actor } from "@/lib/permissions";
@@ -12,6 +13,7 @@ export async function OperationalOverview({
   pendingReportCount: number;
 }) {
   const financial = can(actor.role, "finance");
+  const summary = await expenseSummary(actor);
   const today = new Date(`${manilaDay()}T00:00:00Z`);
   const locations = await db.location.findMany({
     where: roomScope(actor, true),
@@ -92,6 +94,7 @@ export async function OperationalOverview({
           incurredAt: true,
         },
         orderBy: { incurredAt: "desc" },
+        take: 5,
       }),
     ]);
   const due = stays.filter(
@@ -135,14 +138,7 @@ export async function OperationalOverview({
   if (financial)
     cards.push(
       ["Pending guest charges", charges],
-      [
-        "Monthly approved expenses",
-        money(
-          expenses
-            .filter((e) => e.status === "APPROVED")
-            .reduce((n, e) => n + Number(e.amount), 0),
-        ),
-      ],
+      ["Monthly approved expenses", money(summary.approved)],
     );
   return (
     <section className="operations-overview">
@@ -197,6 +193,9 @@ export async function OperationalOverview({
               </p>
             ))}
           <h2>Recent inspections</h2>
+          {!inspections.length && (
+            <p>No room checks yet. Open a guest stay to begin.</p>
+          )}
           {inspections.map((i) => (
             <p key={i.id}>
               <Link href={`/inspections/${i.id}`}>
@@ -220,6 +219,9 @@ export async function OperationalOverview({
             For replacement: {total(["FOR_REPLACEMENT"])}
           </p>
           <h2>Pending issues</h2>
+          {!issues.length && (
+            <p>No pending issues. Thank you for looking after the cabin.</p>
+          )}
           {issues.map((i) => (
             <p key={i.id}>
               <Link href="/damage">
@@ -233,6 +235,7 @@ export async function OperationalOverview({
         <h2>
           {financial ? "Recent expenses" : "My recent expense submissions"}
         </h2>
+        {!expenses.length && <p>No expense submissions this month.</p>}
         {expenses.slice(0, 5).map((e) => (
           <p key={e.id}>
             <Link href={`/expenses/${e.id}`}>

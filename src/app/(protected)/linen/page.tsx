@@ -1,3 +1,6 @@
+export const metadata = { title: "Linen and laundry | Cabin" };
+import { Pagination } from "@/components/pagination";
+import { pageNumber, pageQuery, PAGE_SIZE } from "@/lib/pagination";
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { can } from "@/lib/permissions";
@@ -6,7 +9,12 @@ import { StayForm } from "@/components/stay-form";
 import { Field } from "@/components/fields";
 import { LinenStatus } from "@prisma/client";
 import { dateTime } from "@/lib/format";
-export default async function Linen() {
+export default async function Linen({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
+  const page = pageNumber((await searchParams).page);
   const user = await requireUser("linen");
   const manage = can(user.role, "rooms:manage");
   const locations = await db.location.findMany({
@@ -31,8 +39,8 @@ export default async function Linen() {
         newLocation: true,
         user: { select: { name: true } },
       },
-      orderBy: { createdAt: "desc" },
-      take: 50,
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      ...pageQuery(page),
     }),
     manage
       ? db.inventoryItem.findMany({
@@ -152,7 +160,7 @@ export default async function Linen() {
       </div>
       <section className="panel operation-card">
         <h2>Recent laundry / linen movements</h2>
-        {movements.map((m) => (
+        {movements.slice(0, PAGE_SIZE).map((m) => (
           <p key={m.id}>
             {dateTime(m.createdAt)} · {m.user.name} · {m.item.name} ·{" "}
             {m.quantity}
@@ -164,6 +172,12 @@ export default async function Linen() {
           </p>
         ))}
       </section>
+      {!movements.length && (
+        <p className="empty-state">
+          No records on this page. New records will appear here.
+        </p>
+      )}
+      <Pagination page={page} hasNext={movements.length > PAGE_SIZE} />
     </div>
   );
 }

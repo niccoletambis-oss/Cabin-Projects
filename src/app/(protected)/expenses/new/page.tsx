@@ -1,3 +1,4 @@
+export const metadata = { title: "Add expenses | Cabin" };
 import { requireUser } from "@/lib/auth";
 import { expenseChoices } from "@/lib/expense-choices";
 import { ExpenseFields } from "@/components/expense-fields";

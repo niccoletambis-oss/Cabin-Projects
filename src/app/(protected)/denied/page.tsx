@@ -1,3 +1,4 @@
+export const metadata = { title: "Access restricted | Cabin" };
 import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 export default async function Denied() {

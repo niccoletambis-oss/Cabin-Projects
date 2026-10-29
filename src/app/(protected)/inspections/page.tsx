@@ -1,9 +1,17 @@
+export const metadata = { title: "Room inspections | Cabin" };
+import { Pagination } from "@/components/pagination";
+import { pageNumber, pageQuery, PAGE_SIZE } from "@/lib/pagination";
 import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { roomScope } from "@/lib/stay-operations";
 import { dateTime } from "@/lib/format";
-export default async function Inspections() {
+export default async function Inspections({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
+  const page = pageNumber((await searchParams).page);
   const user = await requireUser("inspection");
   const inspections = await db.stayInspection.findMany({
     where: { location: roomScope(user) },
@@ -12,7 +20,8 @@ export default async function Inspections() {
       location: true,
       user: { select: { name: true } },
     },
-    orderBy: { createdAt: "desc" },
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    ...pageQuery(page),
   });
   return (
     <div className="page">
@@ -22,7 +31,7 @@ export default async function Inspections() {
         Open bookings
       </Link>
       <div className="record-grid">
-        {inspections.map((i) => (
+        {inspections.slice(0, PAGE_SIZE).map((i) => (
           <Link
             key={i.id}
             className="panel operation-card"
@@ -41,6 +50,12 @@ export default async function Inspections() {
           </Link>
         ))}
       </div>
+      {!inspections.length && (
+        <p className="empty-state">
+          No records on this page. New records will appear here.
+        </p>
+      )}
+      <Pagination page={page} hasNext={inspections.length > PAGE_SIZE} />
     </div>
   );
 }

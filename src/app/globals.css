@@ -1155,3 +1155,178 @@ legend {
     min-height: 44px;
   }
 }
+/* Phase 5: readable contrast, keyboard access, resilient phone layouts. */
+:root {
+  --muted: #59685f;
+}
+.workspace-label,
+.nav-link,
+.topbar,
+.eyebrow,
+.stat-top,
+th,
+footer,
+.activity-row time {
+  color: #52644f;
+}
+.badge.low,
+.count-pill {
+  color: #71591e;
+}
+.badge.empty {
+  color: #904331;
+}
+.quantity-in {
+  color: #40673e;
+}
+.quantity-out {
+  color: #775b27;
+}
+.button,
+.icon-button,
+.mobile-menu-button,
+summary {
+  touch-action: manipulation;
+}
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+summary:focus-visible {
+  outline: 3px solid #315c48;
+  outline-offset: 3px;
+}
+.skip-link {
+  position: fixed;
+  left: 12px;
+  top: -100px;
+  z-index: 30;
+  background: #fff;
+  color: #263d34;
+  padding: 14px;
+  border: 2px solid #315c48;
+  border-radius: 6px;
+}
+.skip-link:focus {
+  top: 12px;
+}
+.operation-card h2,
+h1,
+.inventory-card h3,
+.profile strong {
+  overflow-wrap: anywhere;
+}
+.form-message:focus {
+  outline: 2px solid #315c48;
+  outline-offset: 2px;
+}
+.navigation-dialog {
+  padding: 0;
+  width: min(360px, calc(100vw - 28px));
+  max-height: calc(100dvh - 110px);
+}
+.navigation-dialog .sidebar {
+  position: static;
+  display: flex;
+  width: 100%;
+  height: min(720px, calc(100dvh - 112px));
+  border: 0;
+}
+.navigation-dialog .full-navigation {
+  min-height: 0;
+}
+.table-wrap {
+  overscroll-behavior-x: contain;
+}
+.empty-state p {
+  max-width: 42ch;
+  margin-inline: auto;
+}
+.pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-block: 20px;
+}
+@media (max-width: 760px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  } /* Prevent phone browser zoom on focus. */
+  .mobile-nav a {
+    min-height: 44px;
+    justify-content: center;
+  }
+  .button {
+    white-space: normal;
+    text-align: center;
+  }
+  .page-heading > .button {
+    display: inline-flex;
+  } /* Keep Add booking/expense reachable on phones. */
+  .action-row {
+    flex-wrap: wrap;
+  }
+  .action-row > form {
+    flex: 1 1 150px;
+  }
+  .action-row > form > .button {
+    width: 100%;
+  }
+  .record-grid,
+  .form-grid,
+  .operation-card {
+    min-width: 0;
+  }
+  .operation-card a:not(.button) {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .navigation-dialog .sidebar {
+    display: flex;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+@media print {
+  .skip-link,
+  .pagination,
+  .navigation-dialog,
+  button {
+    display: none !important;
+  }
+  thead {
+    display: table-header-group;
+  }
+  tr {
+    break-inside: avoid;
+  }
+}
+.badge.neutral {
+  color: #4b5b54;
+  background: #edf0ec;
+}
+.banner-tag,
+.badge.good {
+  color: #42633c;
+}
+.avatar {
+  color: #635339;
+}
+.table-wrap:focus-visible {
+  outline: 3px solid #315c48;
+  outline-offset: 2px;
+}
+.banner-art span {
+  color: #42633c;
+}

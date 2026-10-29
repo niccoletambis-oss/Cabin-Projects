@@ -1,3 +1,4 @@
+export const metadata = { title: "Purchases details | Cabin" };
 import { EvidencePanel } from "@/components/evidence-panel";
 import { requireUser } from "@/lib/auth";
 import { can } from "@/lib/security";

@@ -1,3 +1,4 @@
+export const metadata = { title: "Inventory | Cabin" };
 import { requireUser } from "@/lib/auth";
 import { can } from "@/lib/security";
 import { db } from "@/lib/db";

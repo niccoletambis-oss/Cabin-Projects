@@ -1,3 +1,4 @@
+export const metadata = { title: "Account settings | Cabin" };
 import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import { ActionForm } from "@/components/action-form";

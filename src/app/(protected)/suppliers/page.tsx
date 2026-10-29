@@ -1,3 +1,4 @@
+export const metadata = { title: "Suppliers | Cabin" };
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { ActionForm } from "@/components/action-form";
@@ -58,7 +59,10 @@ function SupplierFields({
 export default async function Suppliers() {
   await requireUser("suppliers");
   const suppliers = await db.supplier.findMany({
-    include: { purchases: { orderBy: { purchasedAt: "desc" } } },
+    include: {
+      purchases: { orderBy: { purchasedAt: "desc" }, take: 10 },
+      _count: { select: { purchases: true } },
+    },
     orderBy: { name: "asc" },
   });
   return (
@@ -94,7 +98,13 @@ export default async function Suppliers() {
               </ActionForm>
             </details>
             <details>
-              <summary>Purchase history ({s.purchases.length})</summary>
+              <summary>Purchase history ({s._count.purchases})</summary>
+              <p>
+                Latest 10 requests.{" "}
+                <Link href={`/purchases?supplierId=${s.id}`}>
+                  Browse full purchase history
+                </Link>
+              </p>
               {s.purchases.map((p) => (
                 <p key={p.id}>
                   <Link href={`/purchases/${p.id}`}>

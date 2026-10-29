@@ -22,6 +22,7 @@ export function InventoryList({
   items: Item[];
   showCosts?: boolean;
 }) {
+  const [visibleCount, setVisibleCount] = useState(50);
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("");
   const [status, setStatus] = useState("");
@@ -44,14 +45,20 @@ export function InventoryList({
           <input
             aria-label="Search inventory"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setVisibleCount(50);
+            }}
             placeholder="Search items, SKU or room…"
           />
         </label>
         <select
           aria-label="Filter by category"
           value={category}
-          onChange={(e) => setCategory(e.target.value)}
+          onChange={(e) => {
+            setCategory(e.target.value);
+            setVisibleCount(50);
+          }}
         >
           <option value="">All categories</option>
           {[...new Set(items.map((i) => i.category.name))].sort().map((c) => (
@@ -61,27 +68,35 @@ export function InventoryList({
         <select
           aria-label="Filter by stock status"
           value={status}
-          onChange={(e) => setStatus(e.target.value)}
+          onChange={(e) => {
+            setStatus(e.target.value);
+            setVisibleCount(50);
+          }}
         >
           <option value="">All stock levels</option>
           <option value="low">Needs attention</option>
           <option value="good">In stock</option>
         </select>
       </div>
-      <div className="table-wrap inventory-table">
-        <table>
+      <div
+        className="table-wrap inventory-table"
+        tabIndex={0}
+        role="region"
+        aria-label="Scrollable inventory table"
+      >
+        <table aria-label="Inventory items">
           <thead>
             <tr>
-              <th>ITEM</th>
-              <th>CATEGORY</th>
-              <th>LOCATION</th>
-              <th>ON HAND</th>
-              {showCosts && <th>UNIT COST</th>}
-              <th>STATUS</th>
+              <th scope="col">ITEM</th>
+              <th scope="col">CATEGORY</th>
+              <th scope="col">LOCATION</th>
+              <th scope="col">ON HAND</th>
+              {showCosts && <th scope="col">UNIT COST</th>}
+              <th scope="col">STATUS</th>
             </tr>
           </thead>
           <tbody>
-            {filtered.map((i) => (
+            {filtered.slice(0, visibleCount).map((i) => (
               <tr key={i.id}>
                 <td>
                   <div className="item-cell">
@@ -117,7 +132,7 @@ export function InventoryList({
         </table>
       </div>
       <div className="inventory-cards">
-        {filtered.map((i) => (
+        {filtered.slice(0, visibleCount).map((i) => (
           <article className="inventory-card" key={i.id}>
             <h3>
               <Link href={`/inventory/${i.id}`}>{i.name}</Link>
@@ -150,8 +165,19 @@ export function InventoryList({
           <p>Try another search, or add your first inventory item.</p>
         </div>
       )}
-      <div className="table-footer">
-        Showing {filtered.length} of {items.length} items{" "}
+      {visibleCount < filtered.length && (
+        <div className="panel-heading">
+          <button
+            className="button"
+            onClick={() => setVisibleCount((n) => n + 50)}
+          >
+            Show more items
+          </button>
+        </div>
+      )}
+      <div className="table-footer" role="status" aria-live="polite">
+        Showing {Math.min(visibleCount, filtered.length)} of {filtered.length}{" "}
+        matching items ({items.length} total){" "}
         <span>Stock updates appear immediately after saving</span>
       </div>
     </section>

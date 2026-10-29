@@ -1,3 +1,4 @@
+export const metadata = { title: "Reset password | Cabin" };
 import Link from "next/link";
 export default async function Reset({
   searchParams,

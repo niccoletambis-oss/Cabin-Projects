@@ -5,6 +5,19 @@ export async function register() {
   }
 }
 export async function onRequestError(error: unknown) {
-  const { captureError } = await import("./lib/observability");
-  await captureError("request-failed", error);
+  if (process.env.NEXT_RUNTIME === "nodejs") {
+    const { captureError } = await import("./lib/observability");
+    await captureError("request-failed", error);
+  } else {
+    // Edge builds must not bundle Node crypto, SMTP or Undici modules.
+    console.error(
+      JSON.stringify({
+        timestamp: new Date().toISOString(),
+        severity: "error",
+        requestId: crypto.randomUUID(),
+        context: "edge-request-failed",
+        errorType: error instanceof Error ? "Error" : "UnknownError",
+      }),
+    );
+  }
 }

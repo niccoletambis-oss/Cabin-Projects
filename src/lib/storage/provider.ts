@@ -16,7 +16,7 @@ export interface ObjectStorage {
   health(): Promise<void>;
 }
 let s3: S3Client | undefined;
-function client() {
+export function s3Client() {
   if (!s3) {
     const endpoint = process.env.FILE_STORAGE_ENDPOINT;
     const local =
@@ -72,7 +72,7 @@ const database: ObjectStorage = {
 };
 const object: ObjectStorage = {
   async put(file, data) {
-    const result = await client().send(
+    const result = await s3Client().send(
       new PutObjectCommand({
         Bucket: bucket(),
         Key: file.objectKey,
@@ -88,7 +88,7 @@ const object: ObjectStorage = {
     return result.VersionId;
   },
   async get(file) {
-    const result = await client().send(
+    const result = await s3Client().send(
       new GetObjectCommand({
         Bucket: bucket(),
         Key: file.objectKey,
@@ -99,7 +99,7 @@ const object: ObjectStorage = {
     return result.Body.transformToByteArray();
   },
   async delete(file) {
-    await client().send(
+    await s3Client().send(
       new DeleteObjectCommand({
         Bucket: bucket(),
         Key: file.objectKey,
@@ -108,7 +108,7 @@ const object: ObjectStorage = {
     );
   },
   async health() {
-    await client().send(new HeadBucketCommand({ Bucket: bucket() }));
+    await s3Client().send(new HeadBucketCommand({ Bucket: bucket() }));
   },
 };
 export function storageProvider(

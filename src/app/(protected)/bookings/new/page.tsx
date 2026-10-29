@@ -1,3 +1,4 @@
+export const metadata = { title: "Add guest stays | Cabin" };
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { StayForm } from "@/components/stay-form";

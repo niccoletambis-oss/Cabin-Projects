@@ -1,4 +1,6 @@
-import Link from "next/link";
+export const metadata = { title: "Activity log | Cabin" };
+import { Pagination } from "@/components/pagination";
+import { pageNumber, pageQuery, PAGE_SIZE } from "@/lib/pagination";
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { dateTime } from "@/lib/format";
@@ -9,19 +11,18 @@ export default async function Activity({
 }) {
   await requireUser("logs");
   const query = await searchParams;
-  const page = Math.max(1, Math.min(10000, Number(query.page) || 1));
+  const page = pageNumber(query.page);
   const logs = await db.activityLog.findMany({
     include: { user: { select: { name: true } } },
-    orderBy: { createdAt: "desc" },
-    skip: (page - 1) * 50,
-    take: 50,
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    ...pageQuery(page),
   });
   return (
     <div className="page">
       <h1>Activity log</h1>
       <p>Attributable, read-only history of sensitive operations.</p>
       <div className="record-grid">
-        {logs.map((log) => (
+        {logs.slice(0, PAGE_SIZE).map((log) => (
           <section className="panel operation-card" key={log.id}>
             <small>
               {dateTime(log.createdAt)} · {log.user?.name ?? "Legacy / system"}{" "}
@@ -32,18 +33,8 @@ export default async function Activity({
           </section>
         ))}
       </div>
-      <div className="action-row">
-        {page > 1 && (
-          <Link href={`?page=${page - 1}`} className="button">
-            Previous
-          </Link>
-        )}
-        {logs.length === 50 && (
-          <Link href={`?page=${page + 1}`} className="button">
-            Next
-          </Link>
-        )}
-      </div>
+      {!logs.length && <p className="empty-state">No history on this page.</p>}
+      <Pagination page={page} hasNext={logs.length > PAGE_SIZE} />
     </div>
   );
 }

@@ -1,3 +1,4 @@
+export const metadata = { title: "Low stock | Cabin" };
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { can } from "@/lib/security";

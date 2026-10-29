@@ -1,3 +1,6 @@
+export const metadata = { title: "Damage and missing items | Cabin" };
+import { Pagination } from "@/components/pagination";
+import { pageNumber, pageQuery, PAGE_SIZE } from "@/lib/pagination";
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
@@ -9,12 +12,14 @@ import { dateTime, money } from "@/lib/format";
 export default async function Damage({
   searchParams,
 }: {
-  searchParams: Promise<{ type?: string }>;
+  searchParams: Promise<{ type?: string; page?: string }>;
 }) {
   const user = await requireUser();
   const financial = can(user.role, "finance");
   const review = can(user.role, "review");
-  const { type } = await searchParams;
+  const query = await searchParams;
+  const { type } = query;
+  const page = pageNumber(query.page);
   const [items, locations, reports] = await Promise.all([
     db.inventoryItem.findMany({
       select: { id: true, name: true },
@@ -38,7 +43,8 @@ export default async function Damage({
         location: true,
         photos: { select: { id: true } },
       },
-      orderBy: { createdAt: "desc" },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      ...pageQuery(page),
     }),
   ]);
   return (
@@ -99,7 +105,7 @@ export default async function Damage({
         </ActionForm>
       </details>
       <div className="record-grid">
-        {reports.map((r) => (
+        {reports.slice(0, PAGE_SIZE).map((r) => (
           <section key={r.id} className="panel operation-card">
             <span className="badge low">{r.status.replaceAll("_", " ")}</span>
             <h2>{r.item.name}</h2>
@@ -178,6 +184,14 @@ export default async function Damage({
           </section>
         ))}
       </div>
+      {!reports.length && (
+        <p className="empty-state">No records on this page.</p>
+      )}
+      <Pagination
+        page={page}
+        hasNext={reports.length > PAGE_SIZE}
+        query={{ type: type ?? "" }}
+      />
     </div>
   );
 }

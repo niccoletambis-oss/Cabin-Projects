@@ -1,3 +1,4 @@
+export const metadata = { title: "Guest stays details | Cabin" };
 import { ActionForm } from "@/components/action-form";
 import { securityAction } from "@/app/security-actions";
 import { EvidencePanel } from "@/components/evidence-panel";
