@@ -1,4 +1,5 @@
 import { randomUUID, createHash } from "node:crypto";
+import { stagingDatabaseDiagnostic } from "./staging-database-diagnostic";
 export type SafeEvent = {
   timestamp: string;
   severity: "info" | "warn" | "error";
@@ -7,6 +8,7 @@ export type SafeEvent = {
   errorType?: string;
   code?: string;
   fingerprint?: string;
+  databaseDiagnostic?: ReturnType<typeof stagingDatabaseDiagnostic>;
 };
 export type MonitoringSink = { capture(event: SafeEvent): Promise<void> };
 const safeName = (value: unknown, fallback: string) =>
@@ -88,8 +90,13 @@ export async function captureError(
   context: string,
   error: unknown,
   id?: string,
+  readinessDatabaseFailure = false,
 ) {
   const event = safeEvent(context, error, id);
+  if (context === "readiness" && readinessDatabaseFailure) {
+    const diagnostic = stagingDatabaseDiagnostic(error);
+    if (diagnostic) event.databaseDiagnostic = diagnostic;
+  }
   await emitEvent(event);
   return event.requestId;
 }

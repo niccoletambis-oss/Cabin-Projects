@@ -5,8 +5,10 @@ import { captureError } from "@/lib/observability";
 export const dynamic = "force-dynamic";
 let checkedAt = 0;
 async function handleGET() {
+  let databaseReady = false;
   try {
     await db.$queryRaw`SELECT 1`;
+    databaseReady = true;
     if (Date.now() - checkedAt > 5000) {
       await storageProvider().health();
       checkedAt = Date.now();
@@ -16,7 +18,12 @@ async function handleGET() {
       { headers: { "Cache-Control": "no-store" } },
     );
   } catch (error) {
-    const id = await captureError("readiness", error);
+    const id = await captureError(
+      "readiness",
+      error,
+      undefined,
+      !databaseReady,
+    );
     return Response.json(
       { status: "unavailable", requestId: id },
       { status: 503, headers: { "Cache-Control": "no-store" } },
