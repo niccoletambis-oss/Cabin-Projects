@@ -1,8 +1,9 @@
 import "dotenv/config";
-import { readFile, stat } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import { z } from "zod";
 import { db } from "../src/lib/db";
 import { hashPassword } from "../src/lib/security";
+import { assertPrivatePasswordFile } from "./lib/admin-password-file";
 async function main() {
   const mode = process.argv[2];
   if (!["bootstrap", "recover"].includes(mode))
@@ -11,9 +12,7 @@ async function main() {
   const name = z.string().trim().min(2).max(120).parse(process.env.ADMIN_NAME);
   const file = process.env.ADMIN_PASSWORD_FILE;
   if (!file) throw new Error("ADMIN_PASSWORD_FILE is required.");
-  const info = await stat(file);
-  if (!info.isFile() || info.mode & 0o077)
-    throw new Error("Password file must be private (0600).");
+  await assertPrivatePasswordFile(file);
   const passwordHash = await hashPassword(
     (await readFile(file, "utf8")).replace(/\r?\n$/, ""),
   );
